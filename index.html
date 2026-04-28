@@ -4,366 +4,360 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Daily Brief">
-<title>Daily Briefing — 06:00</title>
+<title>Daily Briefing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0a0a;
-    --bg-elev: #131313;
-    --bg-card: #181818;
-    --border: #262626;
-    --border-bright: #3a3a3a;
-    --text: #e8e6e1;
-    --text-dim: #8a8884;
-    --text-faint: #555350;
-    --accent: #d4ff4f;
-    --accent-warm: #ff9d4f;
-    --green: #7fd982;
-    --red: #ff6b6b;
-    --amber: #ffc857;
-    --mono: 'JetBrains Mono', ui-monospace, monospace;
+    --bg: #fafaf7;
+    --bg-elev: #ffffff;
+    --bg-card: #ffffff;
+    --border: #e6e3dc;
+    --border-strong: #cfcbc1;
+    --text: #1a1a1a;
+    --text-mid: #4a4a4a;
+    --text-dim: #6e6b65;
+    --text-faint: #9a9690;
+    --accent: #1a4d2e;
+    --green: #1f7a3a;
+    --red: #c8362d;
+    --amber: #b8761f;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     --serif: 'Fraunces', Georgia, serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  html, body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 14px;
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-    overscroll-behavior: none;
-  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { font-size: 17px; }
 
   body {
-    padding: max(env(safe-area-inset-top), 16px) 16px max(env(safe-area-inset-bottom), 24px);
-    max-width: 720px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 1rem;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+    padding: max(env(safe-area-inset-top), 12px) 16px max(env(safe-area-inset-bottom), 24px);
+    max-width: 760px;
     margin: 0 auto;
-    background-image:
-      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(212, 255, 79, 0.06), transparent),
-      linear-gradient(180deg, var(--bg) 0%, #060606 100%);
+    background-image: radial-gradient(ellipse 60% 30% at 50% 0%, rgba(26, 77, 46, 0.04), transparent);
     min-height: 100vh;
   }
 
-  /* ===== HEADER ===== */
-  .masthead {
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 18px;
-    margin-bottom: 24px;
-  }
-
-  .masthead-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    font-size: 11px;
-    color: var(--text-faint);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-bottom: 14px;
-  }
-
-  .live-dot {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--accent);
-    margin-right: 6px;
-    box-shadow: 0 0 8px var(--accent);
-    animation: pulse 2s infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
-
-  .masthead h1 {
-    font-family: var(--serif);
-    font-weight: 300;
-    font-size: 38px;
-    line-height: 1;
-    letter-spacing: -0.02em;
-    margin-bottom: 8px;
-  }
-
-  .masthead h1 em {
-    font-style: italic;
-    color: var(--accent);
-  }
-
-  .masthead-meta {
-    font-size: 12px;
-    color: var(--text-dim);
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-
-  /* ===== SECTIONS ===== */
-  section {
-    margin-bottom: 32px;
-  }
-
-  .section-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    margin-bottom: 14px;
-    padding-bottom: 8px;
-    border-bottom: 1px dashed var(--border);
-  }
-
-  .section-head h2 {
-    font-family: var(--serif);
-    font-weight: 400;
-    font-size: 22px;
-    letter-spacing: -0.01em;
-  }
-
-  .section-head .tag {
-    font-size: 10px;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--text-faint);
-  }
-
-  /* ===== ASSET CARDS ===== */
-  .asset-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .asset {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px 16px;
-    transition: border-color 0.2s;
-  }
-
-  .asset:active { border-color: var(--border-bright); }
-
-  .asset-row {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 12px;
-    align-items: center;
-    margin-bottom: 8px;
-  }
-
-  .asset-symbol {
-    font-weight: 700;
-    font-size: 13px;
-    letter-spacing: 0.05em;
-    background: var(--bg-elev);
-    padding: 4px 8px;
-    border-radius: 4px;
-    border: 1px solid var(--border-bright);
-    min-width: 60px;
-    text-align: center;
-  }
-
-  .asset-name {
-    color: var(--text-dim);
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-
-  .asset-price {
-    text-align: right;
-    font-weight: 500;
-    font-size: 16px;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .asset-change {
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .change-pos { color: var(--green); }
-  .change-neg { color: var(--red); }
-
-  .asset-analysis {
-    font-size: 12px;
-    color: var(--text-dim);
-    line-height: 1.55;
-    padding-top: 8px;
-    border-top: 1px dashed var(--border);
-  }
-
-  .asset-analysis .label {
-    color: var(--text-faint);
-    text-transform: uppercase;
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    margin-right: 4px;
-  }
-
-  .signal {
-    display: inline-block;
-    padding: 1px 6px;
-    border-radius: 3px;
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    margin-left: 4px;
-  }
-
-  .signal-bull { background: rgba(127, 217, 130, 0.15); color: var(--green); }
-  .signal-bear { background: rgba(255, 107, 107, 0.15); color: var(--red); }
-  .signal-neutral { background: rgba(255, 200, 87, 0.15); color: var(--amber); }
-
-  .sparkline {
-    height: 28px;
-    width: 100%;
-    margin-top: 6px;
-    opacity: 0.7;
-  }
-
-  /* ===== NEWS ===== */
-  .news-list {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .news-item {
-    padding: 12px 0;
-    border-bottom: 1px solid var(--border);
-    display: block;
-    color: inherit;
-    text-decoration: none;
-  }
-
-  .news-item:last-child { border-bottom: none; }
-
-  .news-item-meta {
-    display: flex;
-    gap: 8px;
-    font-size: 10px;
-    color: var(--text-faint);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 4px;
-  }
-
-  .news-item-source {
-    color: var(--accent);
-  }
-
-  .news-item-title {
-    font-family: var(--serif);
-    font-size: 16px;
-    font-weight: 400;
-    line-height: 1.35;
+  .config-banner {
+    background: rgba(184, 118, 31, 0.12);
+    border: 1px solid var(--amber);
     color: var(--text);
-  }
-
-  .news-item-desc {
-    font-size: 12px;
-    color: var(--text-dim);
-    margin-top: 4px;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    font-size: 0.9rem;
     line-height: 1.5;
   }
-
-  /* ===== STATES ===== */
-  .loading, .error {
-    padding: 16px;
-    text-align: center;
-    color: var(--text-dim);
-    font-size: 12px;
+  .config-banner strong { color: var(--amber); }
+  .config-banner code {
+    background: rgba(0,0,0,0.06);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 0.85em;
   }
 
-  .error { color: var(--red); }
-
-  .skeleton {
-    background: linear-gradient(90deg, var(--bg-card) 0%, var(--bg-elev) 50%, var(--bg-card) 100%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-    border-radius: 4px;
-    height: 14px;
-    margin: 4px 0;
-  }
-
-  @keyframes shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-  }
-
-  /* ===== REFRESH ===== */
   .refresh-bar {
     position: sticky;
     top: 0;
-    background: rgba(10, 10, 10, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    margin: -16px -16px 16px;
+    background: rgba(250, 250, 247, 0.92);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    margin: -12px -16px 16px;
     padding: 10px 16px;
     border-bottom: 1px solid var(--border);
     z-index: 10;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 11px;
+    font-size: 0.78rem;
     color: var(--text-dim);
   }
 
+  .live-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    margin-right: 7px;
+    box-shadow: 0 0 6px rgba(31, 122, 58, 0.5);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
   .refresh-btn {
-    background: var(--bg-elev);
-    border: 1px solid var(--border-bright);
-    color: var(--text);
-    padding: 6px 12px;
-    border-radius: 4px;
-    font-family: var(--mono);
-    font-size: 11px;
+    background: var(--text);
+    color: var(--bg-elev);
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-family: var(--sans);
+    font-size: 0.82rem;
+    font-weight: 500;
     cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
   }
+  .refresh-btn:active { opacity: 0.7; }
 
-  .refresh-btn:active { background: var(--border); }
-
-  /* ===== FOOTER ===== */
-  .footer {
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid var(--border);
-    font-size: 10px;
+  .masthead {
+    border-bottom: 2px solid var(--text);
+    padding-bottom: 18px;
+    margin-bottom: 28px;
+  }
+  .masthead-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.72rem;
     color: var(--text-faint);
-    text-align: center;
-    letter-spacing: 0.05em;
-    line-height: 1.6;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .masthead h1 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 2.6rem;
+    line-height: 1;
+    letter-spacing: -0.025em;
+    margin-bottom: 10px;
+  }
+  .masthead h1 em { font-style: italic; font-weight: 400; color: var(--accent); }
+  .masthead-meta {
+    font-size: 0.88rem;
+    color: var(--text-mid);
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .masthead-meta .dot {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--text-faint);
   }
 
-  .footer a { color: var(--text-dim); }
-
-  /* ===== CATEGORY GROUPS ===== */
-  .category-label {
-    font-size: 10px;
-    letter-spacing: 0.2em;
+  section { margin-bottom: 36px; }
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-head h2 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 1.55rem;
+    letter-spacing: -0.015em;
+  }
+  .section-head .tag {
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
     color: var(--text-faint);
-    margin: 16px 0 8px;
-    padding-left: 4px;
+    font-weight: 600;
   }
 
-  .category-label:first-child { margin-top: 0; }
+  .asset-grid { display: flex; flex-direction: column; gap: 10px; }
+  .asset {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow-sm);
+  }
+  .asset-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 14px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .asset-symbol {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+    background: var(--text);
+    color: var(--bg-elev);
+    padding: 5px 10px;
+    border-radius: 5px;
+    min-width: 64px;
+    text-align: center;
+  }
+  .asset-name {
+    color: var(--text-mid);
+    font-size: 0.92rem;
+    font-weight: 500;
+  }
+  .asset-price {
+    text-align: right;
+    font-weight: 600;
+    font-size: 1.18rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .asset-change {
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    margin-top: 2px;
+  }
+  .change-pos { color: var(--green); }
+  .change-neg { color: var(--red); }
 
-  /* iPhone optimizations */
+  .asset-analysis {
+    font-size: 0.85rem;
+    color: var(--text-mid);
+    line-height: 1.6;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border);
+  }
+  .asset-analysis .label {
+    color: var(--text-faint);
+    text-transform: uppercase;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    margin-right: 4px;
+    font-weight: 600;
+  }
+
+  .signal {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .signal-bull { background: rgba(31, 122, 58, 0.12); color: var(--green); }
+  .signal-bear { background: rgba(200, 54, 45, 0.12); color: var(--red); }
+  .signal-neutral { background: rgba(184, 118, 31, 0.14); color: var(--amber); }
+
+  .sparkline {
+    height: 32px;
+    width: 100%;
+    margin-top: 8px;
+    opacity: 0.85;
+  }
+
+  .stale-warn {
+    display: inline-block;
+    font-size: 0.65rem;
+    color: var(--amber);
+    background: rgba(184, 118, 31, 0.1);
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .news-list { display: flex; flex-direction: column; gap: 16px; }
+  .news-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    box-shadow: var(--shadow-sm);
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+  .news-item:active { border-color: var(--border-strong); }
+
+  .news-item-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 0.7rem;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .news-item-source { color: var(--accent); }
+  .news-item-meta .dot {
+    width: 2px; height: 2px;
+    border-radius: 50%;
+    background: var(--text-faint);
+  }
+  .news-item-title {
+    font-family: var(--serif);
+    font-size: 1.12rem;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .news-item-summary {
+    font-size: 0.92rem;
+    color: var(--text-mid);
+    line-height: 1.55;
+  }
+  .news-item-link {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .loading, .error {
+    padding: 18px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .error { color: var(--red); }
+
+  .progress-text {
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    text-align: center;
+    padding: 8px;
+    font-style: italic;
+  }
+
+  .footer {
+    margin-top: 44px;
+    padding-top: 22px;
+    border-top: 1px solid var(--border);
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    text-align: center;
+    line-height: 1.7;
+  }
+  .footer a { color: var(--text-dim); text-decoration: underline; }
+
   @media (max-width: 480px) {
-    .masthead h1 { font-size: 32px; }
-    .section-head h2 { font-size: 19px; }
-    body { font-size: 13px; }
+    .masthead h1 { font-size: 2.2rem; }
+    .section-head h2 { font-size: 1.35rem; }
+    .asset-price { font-size: 1.1rem; }
+  }
+  @media (max-width: 380px) {
+    html { font-size: 16px; }
   }
 </style>
 </head>
@@ -374,103 +368,86 @@
   <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
 </div>
 
+<div id="config-banner-slot"></div>
+
 <header class="masthead">
   <div class="masthead-top">
-    <span>Daily Intelligence Brief №<span id="brief-num">001</span></span>
+    <span>Daily Brief №<span id="brief-num">001</span></span>
     <span id="current-time">—</span>
   </div>
   <h1>The <em>Morning</em> Wire</h1>
   <div class="masthead-meta">
     <span id="current-date">Loading…</span>
-    <span>·</span>
+    <span class="dot"></span>
     <span>Markets · Geopolitics · Tech</span>
   </div>
 </header>
 
-<!-- ============ CRYPTO ============ -->
 <section>
-  <div class="section-head">
-    <h2>Crypto</h2>
-    <span class="tag">Long-term view</span>
-  </div>
-  <div class="asset-grid" id="crypto-grid">
-    <div class="loading">Loading crypto data…</div>
-  </div>
+  <div class="section-head"><h2>Crypto</h2><span class="tag">Long-term view</span></div>
+  <div class="asset-grid" id="crypto-grid"><div class="loading">Loading crypto data…</div></div>
 </section>
 
-<!-- ============ STOCKS ============ -->
 <section>
-  <div class="section-head">
-    <h2>Equities</h2>
-    <span class="tag">Watchlist</span>
-  </div>
-  <div class="asset-grid" id="stocks-grid">
-    <div class="loading">Loading equities…</div>
-  </div>
+  <div class="section-head"><h2>Equities</h2><span class="tag">Watchlist</span></div>
+  <div class="asset-grid" id="stocks-grid"><div class="loading">Loading equities… (paced over ~30s)</div></div>
 </section>
 
-<!-- ============ METALS ============ -->
 <section>
-  <div class="section-head">
-    <h2>Precious Metals</h2>
-    <span class="tag">Spot prices</span>
-  </div>
-  <div class="asset-grid" id="metals-grid">
-    <div class="loading">Loading metals…</div>
-  </div>
+  <div class="section-head"><h2>Precious Metals</h2><span class="tag">Spot prices</span></div>
+  <div class="asset-grid" id="metals-grid"><div class="loading">Loading metals… (paced over ~30s)</div></div>
 </section>
 
-<!-- ============ WORLD NEWS ============ -->
 <section>
-  <div class="section-head">
-    <h2>World Headlines</h2>
-    <span class="tag">Top stories</span>
-  </div>
-  <div class="news-list" id="world-news">
-    <div class="loading">Loading headlines…</div>
-  </div>
+  <div class="section-head"><h2>World Headlines</h2><span class="tag">Top stories</span></div>
+  <div class="news-list" id="world-news"><div class="loading">Loading headlines…</div></div>
 </section>
 
-<!-- ============ CONFLICTS ============ -->
 <section>
-  <div class="section-head">
-    <h2>Conflicts &amp; Security</h2>
-    <span class="tag">Wars · Cyber · Threats</span>
-  </div>
-  <div class="news-list" id="conflict-news">
-    <div class="loading">Loading…</div>
-  </div>
+  <div class="section-head"><h2>Conflicts &amp; Security</h2><span class="tag">Wars · Cyber · Threats</span></div>
+  <div class="news-list" id="conflict-news"><div class="loading">Loading…</div></div>
 </section>
 
-<!-- ============ TRAVEL ============ -->
 <section>
-  <div class="section-head">
-    <h2>Travel &amp; Borders</h2>
-    <span class="tag">Restrictions · Advisories</span>
-  </div>
-  <div class="news-list" id="travel-news">
-    <div class="loading">Loading…</div>
-  </div>
+  <div class="section-head"><h2>Travel &amp; Borders</h2><span class="tag">Restrictions · Advisories</span></div>
+  <div class="news-list" id="travel-news"><div class="loading">Loading…</div></div>
 </section>
 
-<!-- ============ UK / US ============ -->
 <section>
-  <div class="section-head">
-    <h2>UK &amp; US</h2>
-    <span class="tag">National affairs</span>
-  </div>
-  <div class="news-list" id="uk-us-news">
-    <div class="loading">Loading…</div>
-  </div>
+  <div class="section-head"><h2>UK &amp; US</h2><span class="tag">National affairs</span></div>
+  <div class="news-list" id="uk-us-news"><div class="loading">Loading…</div></div>
 </section>
 
 <footer class="footer">
-  Data: CoinGecko · Yahoo Finance · Metals.dev · GDELT · Google News<br>
-  Not financial advice. Long-term crypto signals are heuristic, not predictive.<br>
-  <a href="javascript:void(0)" onclick="loadAll()">Tap to refresh</a>
+  Data: CoinGecko · Alpha Vantage · Google News<br>
+  Not financial advice. Long-term signals are heuristic, not predictive.<br>
+  Markets close on weekends — stock/metal day-change shows last trading session.<br>
+  Data is cached for 30 min to stay within free API limits.<br>
+  <a href="javascript:void(0)" onclick="loadAll(true)">Tap to refresh</a> ·
+  <a href="javascript:void(0)" onclick="clearCacheAndReload()">Clear cache</a>
 </footer>
 
 <script>
+// ============================================================
+// CONFIG — EDIT THIS
+// ============================================================
+const ALPHA_VANTAGE_KEY = "5BQJRQIHU3ODJFSL";
+// Free key from: https://www.alphavantage.co/support/#api-key
+// (the same key you used in the Cloudflare Worker)
+
+// ============================================================
+// SHOW CONFIG BANNER IF KEY NOT SET
+// ============================================================
+if (ALPHA_VANTAGE_KEY === "REPLACE-WITH-YOUR-API-KEY") {
+  document.getElementById('config-banner-slot').innerHTML = `
+    <div class="config-banner">
+      <strong>⚠️ Setup needed:</strong> Stocks and metals will show "unavailable" until you add a free Alpha Vantage API key.
+      Edit <code>index.html</code> on GitHub, find <code>ALPHA_VANTAGE_KEY</code> near the top of the script, and paste in
+      the same key you used for the Cloudflare Worker. Get one free at
+      <a href="https://www.alphavantage.co/support/#api-key" target="_blank">alphavantage.co</a>.
+    </div>`;
+}
+
 // ============================================================
 // CONFIG
 // ============================================================
@@ -484,17 +461,48 @@ const CRYPTO_IDS = {
 };
 
 const STOCKS = [
-  { sym: 'NVDA',  name: 'NVIDIA' },
-  { sym: 'DAWN',  name: 'Day One Biopharmaceuticals' }
+  { sym: 'NVDA', name: 'NVIDIA' },
+  { sym: 'DAWN', name: 'Day One Biopharmaceuticals' }
 ];
 
+const METALS = [
+  { from: 'XAU', to: 'USD', display: 'GOLD',   name: 'Gold (per oz)' },
+  { from: 'XAG', to: 'USD', display: 'SILVER', name: 'Silver (per oz)' }
+];
+
+// Cache TTL: 30 minutes (Alpha Vantage free tier = 25/day, so don't refetch too often)
+const CACHE_TTL_MS = 30 * 60 * 1000;
+
 // ============================================================
-// UTILITIES
+// CACHE (uses in-memory Map; persists for current session)
+// ============================================================
+const cache = new Map();
+
+function cacheGet(key) {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.t > CACHE_TTL_MS) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.v;
+}
+
+function cacheSet(key, value) {
+  cache.set(key, { t: Date.now(), v: value });
+}
+
+function clearCacheAndReload() {
+  cache.clear();
+  loadAll(true);
+}
+
+// ============================================================
+// FORMATTERS
 // ============================================================
 const fmtPrice = (n) => {
   if (n == null || isNaN(n)) return '—';
-  if (n >= 1000) return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
-  if (n >= 1)    return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  if (n >= 1) return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 2 });
   return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 4 });
 };
 
@@ -506,16 +514,15 @@ const fmtChange = (pct) => {
 
 const changeClass = (pct) => pct >= 0 ? 'change-pos' : 'change-neg';
 
-// Long-term signal heuristic based on momentum across timeframes
-function longTermSignal(d7, d30, d90) {
-  const score = (d7 || 0) * 0.2 + (d30 || 0) * 0.3 + (d90 || 0) * 0.5;
+function longTermSignal(d7, d30, dLong) {
+  const score = (d7 || 0) * 0.2 + (d30 || 0) * 0.3 + (dLong || 0) * 0.5;
   if (score > 8)  return { label: 'Accumulation phase', cls: 'signal-bull', tone: 'Multi-month uptrend intact.' };
   if (score > 0)  return { label: 'Mild bullish', cls: 'signal-bull', tone: 'Positive bias on longer timeframes.' };
   if (score > -8) return { label: 'Consolidation', cls: 'signal-neutral', tone: 'Range-bound. Watch for breakout.' };
   return { label: 'Drawdown', cls: 'signal-bear', tone: 'Downtrend. Historically a DCA window for long-term holders.' };
 }
 
-function sparkline(values, w=200, h=28, color='#d4ff4f') {
+function sparkline(values, w=200, h=32, color='#1f7a3a') {
   if (!values || values.length < 2) return '';
   const min = Math.min(...values), max = Math.max(...values);
   const range = max - min || 1;
@@ -525,220 +532,375 @@ function sparkline(values, w=200, h=28, color='#d4ff4f') {
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(' ');
   return `<svg class="sparkline" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/>
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
   </svg>`;
 }
 
+function isMarketStale(dateStr) {
+  if (!dateStr) return false;
+  const ageHours = (Date.now() - new Date(dateStr).getTime()) / 3600000;
+  return ageHours > 36;
+}
+
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
 // ============================================================
-// CRYPTO LOADER (CoinGecko - free, no key needed)
+// CRYPTO (CoinGecko - works fine in browser)
 // ============================================================
 async function loadCrypto() {
   const grid = document.getElementById('crypto-grid');
+  const cached = cacheGet('crypto');
+  if (cached) { renderCrypto(grid, cached); return; }
+
   try {
     const ids = Object.keys(CRYPTO_IDS).join(',');
     const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&price_change_percentage=24h,7d,30d,1y&sparkline=true`;
     const res = await fetch(url);
     if (!res.ok) throw new Error('CoinGecko ' + res.status);
     const data = await res.json();
-
-    grid.innerHTML = data.map(c => {
-      const meta = CRYPTO_IDS[c.id];
-      const d24 = c.price_change_percentage_24h_in_currency;
-      const d7 = c.price_change_percentage_7d_in_currency;
-      const d30 = c.price_change_percentage_30d_in_currency;
-      const d1y = c.price_change_percentage_1y_in_currency;
-      const sig = longTermSignal(d7, d30, d1y);
-      const ath = c.ath;
-      const fromAth = ((c.current_price - ath) / ath * 100);
-      const sparkColor = d30 >= 0 ? '#7fd982' : '#ff6b6b';
-
-      return `
-        <div class="asset">
-          <div class="asset-row">
-            <span class="asset-symbol">${meta.sym}</span>
-            <span class="asset-name">${meta.name}</span>
-            <div>
-              <div class="asset-price">${fmtPrice(c.current_price)}</div>
-              <div class="asset-change ${changeClass(d24)}">${fmtChange(d24)} 24h</div>
-            </div>
-          </div>
-          ${sparkline(c.sparkline_in_7d?.price || [], 200, 28, sparkColor)}
-          <div class="asset-analysis">
-            <span class="label">7d</span><span class="${changeClass(d7)}">${fmtChange(d7)}</span> ·
-            <span class="label">30d</span><span class="${changeClass(d30)}">${fmtChange(d30)}</span> ·
-            <span class="label">1y</span><span class="${changeClass(d1y)}">${fmtChange(d1y)}</span>
-            <span class="signal ${sig.cls}">${sig.label}</span>
-            <div style="margin-top:6px">
-              <span class="label">From ATH</span>${fromAth.toFixed(1)}% ·
-              <span class="label">Note</span>${sig.tone}
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
+    cacheSet('crypto', data);
+    renderCrypto(grid, data);
   } catch (e) {
     grid.innerHTML = `<div class="error">Crypto data unavailable: ${e.message}</div>`;
   }
 }
 
+function renderCrypto(grid, data) {
+  grid.innerHTML = data.map(c => {
+    const meta = CRYPTO_IDS[c.id];
+    const d24 = c.price_change_percentage_24h_in_currency;
+    const d7 = c.price_change_percentage_7d_in_currency;
+    const d30 = c.price_change_percentage_30d_in_currency;
+    const d1y = c.price_change_percentage_1y_in_currency;
+    const sig = longTermSignal(d7, d30, d1y);
+    const fromAth = ((c.current_price - c.ath) / c.ath * 100);
+    const sparkColor = d30 >= 0 ? '#1f7a3a' : '#c8362d';
+    return `
+      <div class="asset">
+        <div class="asset-row">
+          <span class="asset-symbol">${meta.sym}</span>
+          <span class="asset-name">${meta.name}</span>
+          <div>
+            <div class="asset-price">${fmtPrice(c.current_price)}</div>
+            <div class="asset-change ${changeClass(d24)}">${fmtChange(d24)} 24h</div>
+          </div>
+        </div>
+        ${sparkline(c.sparkline_in_7d?.price || [], 200, 32, sparkColor)}
+        <div class="asset-analysis">
+          <span class="label">7d</span><span class="${changeClass(d7)}">${fmtChange(d7)}</span> ·
+          <span class="label">30d</span><span class="${changeClass(d30)}">${fmtChange(d30)}</span> ·
+          <span class="label">1y</span><span class="${changeClass(d1y)}">${fmtChange(d1y)}</span>
+          <span class="signal ${sig.cls}">${sig.label}</span>
+          <div style="margin-top:8px">
+            <span class="label">From ATH</span>${fromAth.toFixed(1)}% ·
+            <span class="label">Note</span>${sig.tone}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
 // ============================================================
-// STOCKS LOADER (Yahoo Finance via public endpoint)
+// ALPHA VANTAGE (used by stocks AND metals)
+// ============================================================
+async function fetchAlphaVantage(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('AlphaV ' + res.status);
+  const j = await res.json();
+  if (j["Note"]) throw new Error('rate-limited (5/min cap)');
+  if (j["Information"]) throw new Error('daily limit reached (25/day)');
+  if (j["Error Message"]) throw new Error('symbol not found');
+  return j;
+}
+
+function processSeriesData(series, closeKey = "4. close") {
+  const dates = Object.keys(series).sort().reverse();
+  if (dates.length < 2) throw new Error('insufficient history');
+
+  const closes = dates.map(d => parseFloat(series[d][closeKey]));
+  const last = closes[0];
+  const prev = closes[1];
+  const lastDate = dates[0];
+
+  const wkIdx = Math.min(5, closes.length - 1);
+  const moIdx = Math.min(21, closes.length - 1);
+
+  return {
+    last,
+    d24: ((last - prev) / prev) * 100,
+    d7: ((last - closes[wkIdx]) / closes[wkIdx]) * 100,
+    d30: ((last - closes[moIdx]) / closes[moIdx]) * 100,
+    closes: closes.slice(0, 60).reverse(), // for sparkline (oldest first)
+    stale: isMarketStale(lastDate)
+  };
+}
+
+// ============================================================
+// STOCKS (paced sequentially to respect 5/min rate limit)
 // ============================================================
 async function loadStocks() {
   const grid = document.getElementById('stocks-grid');
-  try {
-    const symbols = STOCKS.map(s => s.sym).join(',');
-    // Yahoo's chart endpoint via CORS-friendly proxy
-    const results = await Promise.all(STOCKS.map(async s => {
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${s.sym}?interval=1d&range=3mo`;
-      // Yahoo may CORS-block direct browser; fall back to proxy
-      let res;
-      try {
-        res = await fetch(url);
-        if (!res.ok) throw new Error();
-      } catch {
-        res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
-      }
-      if (!res.ok) throw new Error('Yahoo ' + res.status);
-      const j = await res.json();
-      const r = j.chart.result[0];
-      const meta = r.meta;
-      const closes = r.indicators.quote[0].close.filter(v => v != null);
-      const last = meta.regularMarketPrice;
-      const prevClose = meta.chartPreviousClose;
-      const d24 = ((last - prevClose) / prevClose) * 100;
-      const wkAgo = closes[Math.max(0, closes.length - 6)];
-      const moAgo = closes[Math.max(0, closes.length - 22)];
-      const d7 = ((last - wkAgo) / wkAgo) * 100;
-      const d30 = ((last - moAgo) / moAgo) * 100;
-      const high52 = meta.fiftyTwoWeekHigh;
-      const low52 = meta.fiftyTwoWeekLow;
-      return { ...s, last, d24, d7, d30, closes, high52, low52 };
-    }));
-
-    grid.innerHTML = results.map(s => {
-      const sparkColor = s.d30 >= 0 ? '#7fd982' : '#ff6b6b';
-      const fromHigh = ((s.last - s.high52) / s.high52 * 100);
-      const sig = longTermSignal(s.d7, s.d30, s.d30); // less data, weight equally
-      return `
-        <div class="asset">
-          <div class="asset-row">
-            <span class="asset-symbol">${s.sym}</span>
-            <span class="asset-name">${s.name}</span>
-            <div>
-              <div class="asset-price">${fmtPrice(s.last)}</div>
-              <div class="asset-change ${changeClass(s.d24)}">${fmtChange(s.d24)} day</div>
-            </div>
-          </div>
-          ${sparkline(s.closes.slice(-60), 200, 28, sparkColor)}
-          <div class="asset-analysis">
-            <span class="label">7d</span><span class="${changeClass(s.d7)}">${fmtChange(s.d7)}</span> ·
-            <span class="label">30d</span><span class="${changeClass(s.d30)}">${fmtChange(s.d30)}</span>
-            <span class="signal ${sig.cls}">${sig.label}</span>
-            <div style="margin-top:6px">
-              <span class="label">52w range</span>${fmtPrice(s.low52)} – ${fmtPrice(s.high52)} ·
-              <span class="label">From high</span>${fromHigh.toFixed(1)}%
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-  } catch (e) {
-    grid.innerHTML = `<div class="error">Stock data unavailable: ${e.message}</div>`;
+  if (ALPHA_VANTAGE_KEY === "REPLACE-WITH-YOUR-API-KEY") {
+    grid.innerHTML = `<div class="error">Add your Alpha Vantage API key in index.html (see banner above).</div>`;
+    return;
   }
+
+  const results = [];
+  for (let i = 0; i < STOCKS.length; i++) {
+    const s = STOCKS[i];
+    grid.innerHTML = renderStocksProgressive(results, s.sym, STOCKS.length, i);
+
+    let q = cacheGet('stock:' + s.sym);
+    if (!q) {
+      try {
+        const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${s.sym}&outputsize=compact&apikey=${ALPHA_VANTAGE_KEY}`;
+        const j = await fetchAlphaVantage(url);
+        const series = j["Time Series (Daily)"];
+        if (!series) throw new Error('no data returned');
+        q = processSeriesData(series);
+        cacheSet('stock:' + s.sym, q);
+      } catch (err) {
+        results.push({ ...s, ok: false, err: err.message });
+        // pace before next call
+        if (i < STOCKS.length - 1) await sleep(13000);
+        continue;
+      }
+    }
+    results.push({ ...s, ...q, ok: true });
+    // pace 13s between live calls (skip wait if cached)
+    if (i < STOCKS.length - 1 && !cacheGet('stock:' + STOCKS[i+1].sym)) {
+      grid.innerHTML = renderStocksProgressive(results, STOCKS[i+1].sym, STOCKS.length, i+1, true);
+      await sleep(13000);
+    }
+  }
+
+  grid.innerHTML = renderStocksFinal(results);
+}
+
+function renderStocksProgressive(results, currentSym, total, idx, waiting = false) {
+  const done = results.map(s => renderStockCard(s)).join('');
+  const status = waiting
+    ? `<div class="progress-text">Waiting 13s for rate limit, then loading ${currentSym}…</div>`
+    : `<div class="progress-text">Loading ${currentSym} (${idx + 1}/${total})…</div>`;
+  return done + status;
+}
+
+function renderStocksFinal(results) {
+  return results.map(s => renderStockCard(s)).join('');
+}
+
+function renderStockCard(s) {
+  if (!s.ok) {
+    return `<div class="asset"><div class="asset-row">
+      <span class="asset-symbol">${s.sym}</span>
+      <span class="asset-name">${s.name}</span>
+      <div class="asset-price" style="font-size:0.85rem;color:var(--red)">${s.err}</div>
+    </div></div>`;
+  }
+  const sparkColor = s.d30 >= 0 ? '#1f7a3a' : '#c8362d';
+  const sig = longTermSignal(s.d7, s.d30, s.d30);
+  const staleTag = s.stale ? `<span class="stale-warn">market closed</span>` : '';
+  return `
+    <div class="asset">
+      <div class="asset-row">
+        <span class="asset-symbol">${s.sym}</span>
+        <span class="asset-name">${s.name}</span>
+        <div>
+          <div class="asset-price">${fmtPrice(s.last)}</div>
+          <div class="asset-change ${changeClass(s.d24)}">${fmtChange(s.d24)} day${staleTag}</div>
+        </div>
+      </div>
+      ${sparkline(s.closes, 200, 32, sparkColor)}
+      <div class="asset-analysis">
+        <span class="label">7d</span><span class="${changeClass(s.d7)}">${fmtChange(s.d7)}</span> ·
+        <span class="label">30d</span><span class="${changeClass(s.d30)}">${fmtChange(s.d30)}</span>
+        <span class="signal ${sig.cls}">${sig.label}</span>
+      </div>
+    </div>
+  `;
 }
 
 // ============================================================
-// METALS LOADER (Yahoo futures: GC=F gold, SI=F silver)
+// METALS (same pacing strategy)
 // ============================================================
 async function loadMetals() {
   const grid = document.getElementById('metals-grid');
-  const METALS = [
-    { sym: 'GC=F', display: 'GOLD',   name: 'Gold (per oz)' },
-    { sym: 'SI=F', display: 'SILVER', name: 'Silver (per oz)' }
-  ];
-  try {
-    const results = await Promise.all(METALS.map(async m => {
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${m.sym}?interval=1d&range=3mo`;
-      let res;
-      try {
-        res = await fetch(url);
-        if (!res.ok) throw new Error();
-      } catch {
-        res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
-      }
-      const j = await res.json();
-      const r = j.chart.result[0];
-      const meta = r.meta;
-      const closes = r.indicators.quote[0].close.filter(v => v != null);
-      const last = meta.regularMarketPrice;
-      const prevClose = meta.chartPreviousClose;
-      const d24 = ((last - prevClose) / prevClose) * 100;
-      const wkAgo = closes[Math.max(0, closes.length - 6)];
-      const moAgo = closes[Math.max(0, closes.length - 22)];
-      const d7 = ((last - wkAgo) / wkAgo) * 100;
-      const d30 = ((last - moAgo) / moAgo) * 100;
-      return { ...m, last, d24, d7, d30, closes };
-    }));
-
-    grid.innerHTML = results.map(m => {
-      const sparkColor = m.d30 >= 0 ? '#ffc857' : '#ff6b6b';
-      const sig = longTermSignal(m.d7, m.d30, m.d30);
-      return `
-        <div class="asset">
-          <div class="asset-row">
-            <span class="asset-symbol">${m.display}</span>
-            <span class="asset-name">${m.name}</span>
-            <div>
-              <div class="asset-price">${fmtPrice(m.last)}</div>
-              <div class="asset-change ${changeClass(m.d24)}">${fmtChange(m.d24)} day</div>
-            </div>
-          </div>
-          ${sparkline(m.closes.slice(-60), 200, 28, sparkColor)}
-          <div class="asset-analysis">
-            <span class="label">7d</span><span class="${changeClass(m.d7)}">${fmtChange(m.d7)}</span> ·
-            <span class="label">30d</span><span class="${changeClass(m.d30)}">${fmtChange(m.d30)}</span>
-            <span class="signal ${sig.cls}">${sig.label}</span>
-          </div>
-        </div>
-      `;
-    }).join('');
-  } catch (e) {
-    grid.innerHTML = `<div class="error">Metals data unavailable: ${e.message}</div>`;
+  if (ALPHA_VANTAGE_KEY === "REPLACE-WITH-YOUR-API-KEY") {
+    grid.innerHTML = `<div class="error">Add your Alpha Vantage API key in index.html (see banner above).</div>`;
+    return;
   }
+
+  const results = [];
+  for (let i = 0; i < METALS.length; i++) {
+    const m = METALS[i];
+    grid.innerHTML = renderMetalsProgressive(results, m.display, METALS.length, i);
+
+    let q = cacheGet('metal:' + m.from);
+    if (!q) {
+      try {
+        const url = `https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=${m.from}&to_symbol=${m.to}&outputsize=compact&apikey=${ALPHA_VANTAGE_KEY}`;
+        const j = await fetchAlphaVantage(url);
+        const series = j["Time Series FX (Daily)"];
+        if (!series) throw new Error('no data returned');
+        q = processSeriesData(series);
+        cacheSet('metal:' + m.from, q);
+      } catch (err) {
+        results.push({ ...m, ok: false, err: err.message });
+        if (i < METALS.length - 1) await sleep(13000);
+        continue;
+      }
+    }
+    results.push({ ...m, ...q, ok: true });
+    if (i < METALS.length - 1 && !cacheGet('metal:' + METALS[i+1].from)) {
+      grid.innerHTML = renderMetalsProgressive(results, METALS[i+1].display, METALS.length, i+1, true);
+      await sleep(13000);
+    }
+  }
+
+  grid.innerHTML = renderMetalsFinal(results);
+}
+
+function renderMetalsProgressive(results, currentDisplay, total, idx, waiting = false) {
+  const done = results.map(m => renderMetalCard(m)).join('');
+  const status = waiting
+    ? `<div class="progress-text">Waiting 13s for rate limit, then loading ${currentDisplay}…</div>`
+    : `<div class="progress-text">Loading ${currentDisplay} (${idx + 1}/${total})…</div>`;
+  return done + status;
+}
+
+function renderMetalsFinal(results) {
+  return results.map(m => renderMetalCard(m)).join('');
+}
+
+function renderMetalCard(m) {
+  if (!m.ok) {
+    return `<div class="asset"><div class="asset-row">
+      <span class="asset-symbol">${m.display}</span>
+      <span class="asset-name">${m.name}</span>
+      <div class="asset-price" style="font-size:0.85rem;color:var(--red)">${m.err}</div>
+    </div></div>`;
+  }
+  const sparkColor = m.d30 >= 0 ? '#b8761f' : '#c8362d';
+  const sig = longTermSignal(m.d7, m.d30, m.d30);
+  const staleTag = m.stale ? `<span class="stale-warn">market closed</span>` : '';
+  return `
+    <div class="asset">
+      <div class="asset-row">
+        <span class="asset-symbol">${m.display}</span>
+        <span class="asset-name">${m.name}</span>
+        <div>
+          <div class="asset-price">${fmtPrice(m.last)}</div>
+          <div class="asset-change ${changeClass(m.d24)}">${fmtChange(m.d24)} day${staleTag}</div>
+        </div>
+      </div>
+      ${sparkline(m.closes, 200, 32, sparkColor)}
+      <div class="asset-analysis">
+        <span class="label">7d</span><span class="${changeClass(m.d7)}">${fmtChange(m.d7)}</span> ·
+        <span class="label">30d</span><span class="${changeClass(m.d30)}">${fmtChange(m.d30)}</span>
+        <span class="signal ${sig.cls}">${sig.label}</span>
+      </div>
+    </div>
+  `;
 }
 
 // ============================================================
-// NEWS LOADER (Google News RSS via rss2json)
+// NEWS (allorigins.win proxy + manual RSS parse)
 // ============================================================
+function decodeEntities(s) {
+  if (!s) return '';
+  return s
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n)));
+}
+
+function stripHtml(html) {
+  if (!html) return '';
+  // Strip CDATA wrapper if present
+  html = html.replace(/^<!\[CDATA\[/, '').replace(/\]\]>$/, '');
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+}
+
+function parseRSS(xmlText) {
+  const items = [];
+  const itemMatches = [...xmlText.matchAll(/<item>([\s\S]*?)<\/item>/g)];
+  for (const m of itemMatches) {
+    const block = m[1];
+    const titleMatch = block.match(/<title>([\s\S]*?)<\/title>/);
+    const linkMatch = block.match(/<link>([\s\S]*?)<\/link>/);
+    const dateMatch = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
+    const descMatch = block.match(/<description>([\s\S]*?)<\/description>/);
+
+    const title = titleMatch ? decodeEntities(stripHtml(titleMatch[1])) : '';
+    const link = linkMatch ? decodeEntities(stripHtml(linkMatch[1])) : '';
+    const pubDate = dateMatch ? stripHtml(dateMatch[1]) : '';
+    const description = descMatch ? decodeEntities(stripHtml(descMatch[1])) : '';
+
+    if (title) items.push({ title, link, pubDate, description });
+  }
+  return items;
+}
+
+function extractSummary(description, title) {
+  if (!description) return '';
+  let text = description;
+  if (title && text.toLowerCase().startsWith(title.toLowerCase().slice(0, 30))) {
+    text = text.slice(title.length).trim();
+    if (text.startsWith('-') || text.startsWith('—')) text = text.slice(1).trim();
+  }
+  if (text.length > 280) text = text.slice(0, 277).trim() + '…';
+  return text;
+}
+
 async function loadNewsFeed(targetId, query, limit = 6) {
   const target = document.getElementById(targetId);
+  const cacheKey = 'news:' + targetId;
+  const cached = cacheGet(cacheKey);
+  if (cached) { renderNews(target, cached, limit); return; }
+
   try {
     const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en&gl=US&ceid=US:en`;
-    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
-    const res = await fetch(apiUrl);
-    const j = await res.json();
-    if (!j.items || j.items.length === 0) throw new Error('No articles');
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`;
+    const res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error('proxy ' + res.status);
+    const xml = await res.text();
+    const items = parseRSS(xml);
+    if (items.length === 0) throw new Error('no articles parsed');
 
-    target.innerHTML = j.items.slice(0, limit).map(item => {
-      const source = (item.title.split(' - ').pop() || 'News').slice(0, 40);
-      const cleanTitle = item.title.replace(/ - [^-]+$/, '');
-      const date = new Date(item.pubDate);
-      const ago = timeAgo(date);
-      return `
-        <a class="news-item" href="${item.link}" target="_blank" rel="noopener">
-          <div class="news-item-meta">
-            <span class="news-item-source">${source}</span>
-            <span>·</span>
-            <span>${ago}</span>
-          </div>
-          <div class="news-item-title">${cleanTitle}</div>
-        </a>
-      `;
-    }).join('');
+    cacheSet(cacheKey, items);
+    renderNews(target, items, limit);
   } catch (e) {
     target.innerHTML = `<div class="error">News unavailable: ${e.message}</div>`;
   }
+}
+
+function renderNews(target, items, limit) {
+  target.innerHTML = items.slice(0, limit).map(item => {
+    const sourceMatch = item.title.match(/ - ([^-]+)$/);
+    const source = sourceMatch ? sourceMatch[1].trim().slice(0, 40) : 'News';
+    const cleanTitle = item.title.replace(/ - [^-]+$/, '').trim();
+    const summary = extractSummary(item.description, cleanTitle);
+    const date = new Date(item.pubDate);
+    const ago = isNaN(date.getTime()) ? '' : timeAgo(date);
+    return `
+      <a class="news-item" href="${item.link}" target="_blank" rel="noopener">
+        <div class="news-item-meta">
+          <span class="news-item-source">${source}</span>
+          ${ago ? `<span class="dot"></span><span>${ago}</span>` : ''}
+        </div>
+        <div class="news-item-title">${cleanTitle}</div>
+        ${summary ? `<div class="news-item-summary">${summary}</div>` : ''}
+        <span class="news-item-link">Read full article →</span>
+      </a>
+    `;
+  }).join('');
 }
 
 function timeAgo(date) {
@@ -760,30 +922,31 @@ function updateHeader() {
   document.getElementById('last-updated').textContent =
     'Updated ' + now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
-  // Brief number = days since launch
   const launch = new Date('2026-04-25');
   const days = Math.floor((now - launch) / 86400000) + 1;
   document.getElementById('brief-num').textContent = String(days).padStart(3, '0');
 }
 
-async function loadAll() {
+async function loadAll(force = false) {
+  if (force) cache.clear();
   updateHeader();
-  // Markets in parallel
+
+  // Run things that don't share rate limits in parallel
   loadCrypto();
-  loadStocks();
-  loadMetals();
-  // News feeds
-  loadNewsFeed('world-news', 'world news', 6);
+  loadNewsFeed('world-news', 'world news today', 6);
   loadNewsFeed('conflict-news', 'war OR conflict OR cyberattack OR hacking', 6);
   loadNewsFeed('travel-news', 'travel restrictions OR travel advisory OR border', 5);
   loadNewsFeed('uk-us-news', 'United Kingdom OR United States politics economy', 6);
+
+  // Stocks then metals — sequential to respect Alpha Vantage 5/min limit
+  await loadStocks();
+  await loadMetals();
 }
 
-// Initial load
 loadAll();
 
-// Auto-refresh every 5 minutes if tab stays open
-setInterval(loadAll, 5 * 60 * 1000);
+// Refresh page every 30 minutes (cache TTL aligns with this)
+setInterval(() => loadAll(false), 30 * 60 * 1000);
 </script>
 </body>
 </html>
