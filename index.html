@@ -463,11 +463,7 @@ const STOCKS = [
   { sym: 'DAWN', name: 'Day One Biopharmaceuticals' }
 ];
 
-// freegoldapi.com — no key needed, CORS-enabled, completely free
-const METALS = [
-  { sym: 'XAU', apiSym: 'gold',   display: 'GOLD',   name: 'Gold (per oz)' },
-  { sym: 'XAG', apiSym: 'silver', display: 'SILVER', name: 'Silver (per oz)' }
-];
+// Metals loaded directly in loadMetals() via freegoldapi.com — no config needed
 
 // Cache TTL: 30 minutes (Alpha Vantage free tier = 25/day, so don't refetch too often)
 const CACHE_TTL_MS = 30 * 60 * 1000;
@@ -722,38 +718,80 @@ function renderStockCard(s) {
 
 // ============================================================
 // METALS via freegoldapi.com — no key, no signup, CORS-enabled
-// Returns daily gold & silver prices going back years
+// Gold: latest.json (last entry), Silver: derived from gold/silver ratio CSV
 // ============================================================
 async function loadMetals() {
   const grid = document.getElementById('metals-grid');
   const results = [];
 
-  for (const m of METALS) {
-    let q = cacheGet('metal:' + m.sym);
-    if (!q) {
-      try {
-        // freegoldapi.com returns daily prices as array sorted oldest→newest
-        const url = `https://api.freegoldapi.com/v1/${m.apiSym}?currency=USD`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('freegoldapi ' + res.status);
-        const j = await res.json();
+  // ---- GOLD ----
+  try {
+    let goldData = cacheGet('metal:gold');
+    if (!goldData) {
+      const res = await fetch('https://freegoldapi.com/data/latest.json');
+      if (!res.ok) throw new Error('freegoldapi ' + res.status);
+      const arr = await res.json();
+      if (!Array.isArray(arr) || arr.length < 2) throw new Error('no data');
 
-        // Response: { price, open, close, change, change_percent, ... }
-        const last = j.price ?? j.close;
-        const prev = j.open ?? last;
-        const d24 = j.change_percent ?? ((last - prev) / prev) * 100;
-        const d7 = d24; // freegoldapi free tier doesn't give multi-week history
-        const d30 = d24;
+      const last  = arr[arr.length - 1].price;
+      const prev  = arr[arr.length - 2].price;
+      const wkAgo = arr[Math.max(0, arr.length - 8)].price;
+      const moAgo = arr[Math.max(0, arr.length - 32)].price;
 
-        if (!last) throw new Error('no price data');
-        q = { last, d24, d7, d30, closes: [], stale: false };
-        cacheSet('metal:' + m.sym, q);
-      } catch (err) {
-        results.push({ ...m, ok: false, err: err.message });
-        continue;
-      }
+      goldData = {
+        last,
+        d24: ((last - prev)  / prev)  * 100,
+        d7:  ((last - wkAgo) / wkAgo) * 100,
+        d30: ((last - moAgo) / moAgo) * 100,
+        closes: arr.slice(-60).map(e => e.price),
+        stale: false
+      };
+      cacheSet('metal:gold', goldData);
     }
-    results.push({ ...m, ...q, ok: true });
+    results.push({ sym: 'XAU', display: 'GOLD', name: 'Gold (per oz)', ...goldData, ok: true });
+  } catch (err) {
+    results.push({ sym: 'XAU', display: 'GOLD', name: 'Gold (per oz)', ok: false, err: err.message });
+  }
+
+  // ---- SILVER — derived from gold price ÷ gold/silver ratio ----
+  try {
+    let silverData = cacheGet('metal:silver');
+    if (!silverData) {
+      const res = await fetch('https://freegoldapi.com/data/gold_silver_ratio_enriched.csv');
+      if (!res.ok) throw new Error('ratio CSV ' + res.status);
+      const csv = await res.text();
+      const lines = csv.trim().split('\n').filter(l => l && !l.startsWith('date'));
+
+      // CSV format: date, price (gold), silver_oz_per_gold_oz
+      // silver price = gold price / ratio
+      const parse = (line) => {
+        const parts = line.split(',');
+        const goldPx = parseFloat(parts[1]);
+        const ratio  = parseFloat(parts[2]);
+        return (goldPx && ratio) ? goldPx / ratio : null;
+      };
+
+      const prices = lines.map(parse).filter(v => v !== null);
+      if (prices.length < 2) throw new Error('insufficient ratio data');
+
+      const last  = prices[prices.length - 1];
+      const prev  = prices[prices.length - 2];
+      const wkAgo = prices[Math.max(0, prices.length - 8)];
+      const moAgo = prices[Math.max(0, prices.length - 32)];
+
+      silverData = {
+        last,
+        d24: ((last - prev)  / prev)  * 100,
+        d7:  ((last - wkAgo) / wkAgo) * 100,
+        d30: ((last - moAgo) / moAgo) * 100,
+        closes: prices.slice(-60),
+        stale: false
+      };
+      cacheSet('metal:silver', silverData);
+    }
+    results.push({ sym: 'XAG', display: 'SILVER', name: 'Silver (per oz)', ...silverData, ok: true });
+  } catch (err) {
+    results.push({ sym: 'XAG', display: 'SILVER', name: 'Silver (per oz)', ok: false, err: err.message });
   }
 
   grid.innerHTML = renderMetalsFinal(results);
