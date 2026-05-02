@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Daily Brief">
+<title>Daily Briefing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fafaf7;
+    --bg-elev: #ffffff;
+    --bg-card: #ffffff;
+    --border: #e6e3dc;
+    --border-strong: #cfcbc1;
+    --text: #1a1a1a;
+    --text-mid: #4a4a4a;
+    --text-dim: #6e6b65;
+    --text-faint: #9a9690;
+    --accent: #1a4d2e;
+    --green: #1f7a3a;
+    --red: #c8362d;
+    --amber: #b8761f;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --serif: 'Fraunces', Georgia, serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { font-size: 17px; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 1rem;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+    padding: max(env(safe-area-inset-top), 12px) 16px max(env(safe-area-inset-bottom), 24px);
+    max-width: 760px;
+    margin: 0 auto;
+    background-image: radial-gradient(ellipse 60% 30% at 50% 0%, rgba(26, 77, 46, 0.04), transparent);
+    min-height: 100vh;
+  }
+
+  /* ===== CONFIG BANNER ===== */
+  .config-banner {
+    background: rgba(184, 118, 31, 0.12);
+    border: 1px solid var(--amber);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+  .config-banner strong { color: var(--amber); }
+  .config-banner code { background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 3px; font-family: var(--mono); font-size: 0.85em; }
+
+  /* ===== STICKY REFRESH BAR ===== */
+  .refresh-bar {
+    position: sticky; top: 0;
+    background: rgba(250, 250, 247, 0.92);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    margin: -12px -16px 16px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    z-index: 10;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.78rem; color: var(--text-dim);
+  }
+  .live-dot {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green); margin-right: 7px;
+    box-shadow: 0 0 6px rgba(31, 122, 58, 0.5);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+  .refresh-btn {
+    background: var(--text); color: var(--bg-elev); border: none;
+    padding: 8px 14px; border-radius: 6px;
+    font-family: var(--sans); font-size: 0.82rem; font-weight: 500; cursor: pointer;
+  }
+  .refresh-btn:active { opacity: 0.7; }
+
+  /* ===== MASTHEAD ===== */
+  .masthead { border-bottom: 2px solid var(--text); padding-bottom: 18px; margin-bottom: 28px; }
+  .masthead-top {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 0.72rem; color: var(--text-faint);
+    letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; margin-bottom: 12px;
+  }
+  .masthead h1 { font-family: var(--serif); font-weight: 500; font-size: 2.6rem; line-height: 1; letter-spacing: -0.025em; margin-bottom: 10px; }
+  .masthead h1 em { font-style: italic; font-weight: 400; color: var(--accent); }
+  .masthead-meta { font-size: 0.88rem; color: var(--text-mid); display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .dot { display: inline-block; width: 3px; height: 3px; border-radius: 50%; background: var(--text-faint); }
+
+  /* ===== SECTIONS ===== */
+  section { margin-bottom: 36px; }
+  .section-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+  }
+  .section-head h2 { font-family: var(--serif); font-weight: 500; font-size: 1.55rem; letter-spacing: -0.015em; }
+  .section-head .tag { font-size: 0.68rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-faint); font-weight: 600; }
+
+  /* ===== ASSET CARDS (crypto price cards) ===== */
+  .asset-grid { display: flex; flex-direction: column; gap: 10px; }
+  .asset {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px; box-shadow: var(--shadow-sm);
+  }
+  .asset-row { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; margin-bottom: 10px; }
+  .asset-symbol {
+    font-family: var(--mono); font-weight: 700; font-size: 0.82rem; letter-spacing: 0.04em;
+    background: var(--text); color: var(--bg-elev);
+    padding: 5px 10px; border-radius: 5px; min-width: 64px; text-align: center;
+  }
+  .asset-name { color: var(--text-mid); font-size: 0.92rem; font-weight: 500; }
+  .asset-price { text-align: right; font-weight: 600; font-size: 1.18rem; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .asset-change { font-size: 0.85rem; font-variant-numeric: tabular-nums; font-weight: 500; margin-top: 2px; }
+  .change-pos { color: var(--green); }
+  .change-neg { color: var(--red); }
+  .asset-analysis { font-size: 0.85rem; color: var(--text-mid); line-height: 1.6; padding-top: 10px; border-top: 1px dashed var(--border); }
+  .asset-analysis .label { color: var(--text-faint); text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.1em; margin-right: 4px; font-weight: 600; }
+  .signal {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin-left: 6px; vertical-align: middle;
+  }
+  .signal-bull { background: rgba(31, 122, 58, 0.12); color: var(--green); }
+  .signal-bear { background: rgba(200, 54, 45, 0.12); color: var(--red); }
+  .signal-neutral { background: rgba(184, 118, 31, 0.14); color: var(--amber); }
+  .sparkline { height: 32px; width: 100%; margin-top: 8px; opacity: 0.85; }
+
+  /* ===== CRYPTO DEEP DIVE CARDS ===== */
+  .crypto-deep { display: flex; flex-direction: column; gap: 20px; }
+  .crypto-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-sm);
+  }
+  .crypto-card-header {
+    display: grid; grid-template-columns: auto 1fr auto;
+    gap: 14px; align-items: center;
+    padding: 16px 18px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .crypto-card-body { padding: 0; }
+
+  .crypto-news-item {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .crypto-news-item:last-child { border-bottom: none; }
+
+  .crypto-news-meta {
+    display: flex; gap: 8px; align-items: center;
+    font-size: 0.7rem; color: var(--text-faint);
+    text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; margin-bottom: 6px;
+  }
+  .crypto-news-source { color: var(--accent); }
+  .crypto-news-title {
+    font-family: var(--serif); font-size: 1.08rem; font-weight: 500;
+    line-height: 1.3; color: var(--text); margin-bottom: 8px;
+  }
+  .crypto-news-body {
+    font-size: 0.93rem; color: var(--text-mid); line-height: 1.65;
+    margin-bottom: 8px;
+  }
+  .crypto-news-link { font-size: 0.78rem; color: var(--accent); font-weight: 600; text-decoration: none; display: inline-block; }
+
+  /* ===== GENERAL NEWS CARDS ===== */
+  .news-list { display: flex; flex-direction: column; gap: 16px; }
+  .news-item {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px; box-shadow: var(--shadow-sm);
+    text-decoration: none; color: inherit; display: block;
+  }
+  .news-item:active { border-color: var(--border-strong); }
+  .news-item-meta {
+    display: flex; gap: 8px; align-items: center;
+    font-size: 0.7rem; color: var(--text-faint);
+    text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; margin-bottom: 8px;
+  }
+  .news-item-source { color: var(--accent); }
+  .news-item-title { font-family: var(--serif); font-size: 1.1rem; font-weight: 500; line-height: 1.3; color: var(--text); margin-bottom: 8px; }
+  .news-item-body { font-size: 0.93rem; color: var(--text-mid); line-height: 1.65; margin-bottom: 8px; }
+  .news-item-link { display: inline-block; font-size: 0.78rem; color: var(--accent); font-weight: 600; }
+
+  /* ===== STATES ===== */
+  .loading, .error {
+    padding: 18px; text-align: center; color: var(--text-dim); font-size: 0.9rem;
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+  }
+  .error { color: var(--red); }
+  .progress-text { font-size: 0.78rem; color: var(--text-faint); text-align: center; padding: 8px; font-style: italic; }
+
+  /* ===== FOOTER ===== */
+  .footer { margin-top: 44px; padding-top: 22px; border-top: 1px solid var(--border); font-size: 0.78rem; color: var(--text-faint); text-align: center; line-height: 1.7; }
+  .footer a { color: var(--text-dim); text-decoration: underline; }
+
+  @media (max-width: 480px) {
+    .masthead h1 { font-size: 2.2rem; }
+    .section-head h2 { font-size: 1.35rem; }
+    .asset-price { font-size: 1.1rem; }
+  }
+  @media (max-width: 380px) { html { font-size: 16px; } }
+</style>
+</head>
+<body>
+
+<div class="refresh-bar">
+  <span><span class="live-dot"></span>LIVE · <span id="last-updated">—</span></span>
+  <button class="refresh-btn" onclick="loadAll(true)">↻ Refresh</button>
+</div>
+
+<div id="config-banner-slot"></div>
+
+<header class="masthead">
+  <div class="masthead-top">
+    <span>Daily Brief №<span id="brief-num">001</span></span>
+    <span id="current-time">—</span>
+  </div>
+  <h1>The <em>Morning</em> Wire</h1>
+  <div class="masthead-meta">
+    <span id="current-date">Loading…</span>
+    <span class="dot"></span>
+    <span>Markets · Geopolitics · Tech</span>
+  </div>
+</header>
+
+<!-- CRYPTO PRICES -->
+<section>
+  <div class="section-head"><h2>Crypto</h2><span class="tag">Long-term view</span></div>
+  <div class="asset-grid" id="crypto-grid"><div class="loading">Loading crypto prices…</div></div>
+</section>
+
+<!-- CRYPTO DEEP DIVE -->
+<section>
+  <div class="section-head"><h2>Crypto Analysis</h2><span class="tag">BTC · XRP · ETH · News</span></div>
+  <div class="crypto-deep" id="crypto-deep"><div class="loading">Loading crypto analysis…</div></div>
+</section>
+
+<!-- EQUITIES -->
+<section>
+  <div class="section-head"><h2>Equities</h2><span class="tag">Watchlist</span></div>
+  <div class="asset-grid" id="stocks-grid"><div class="loading">Loading equities…</div></div>
+</section>
+
+<!-- WORLD NEWS -->
+<section>
+  <div class="section-head"><h2>World Headlines</h2><span class="tag">Top stories</span></div>
+  <div class="news-list" id="world-news"><div class="loading">Loading headlines…</div></div>
+</section>
+
+<!-- CONFLICTS -->
+<section>
+  <div class="section-head"><h2>Conflicts &amp; Security</h2><span class="tag">Wars · Cyber · Threats</span></div>
+  <div class="news-list" id="conflict-news"><div class="loading">Loading…</div></div>
+</section>
+
+<!-- TRAVEL -->
+<section>
+  <div class="section-head"><h2>Travel &amp; Borders</h2><span class="tag">Restrictions · Advisories</span></div>
+  <div class="news-list" id="travel-news"><div class="loading">Loading…</div></div>
+</section>
+
+<!-- UK / US -->
+<section>
+  <div class="section-head"><h2>UK &amp; US</h2><span class="tag">National affairs</span></div>
+  <div class="news-list" id="uk-us-news"><div class="loading">Loading…</div></div>
+</section>
+
+<footer class="footer">
+  Data: CoinGecko · Alpha Vantage · Google News<br>
+  Not financial advice. Long-term signals are heuristic, not predictive.<br>
+  <a href="javascript:void(0)" onclick="loadAll(true)">Tap to refresh</a>
+</footer>
+
+<script>
+// ============================================================
+// CONFIG — ONLY THING YOU NEED TO EDIT
+// ============================================================
+const ALPHA_VANTAGE_KEY = "REPLACE-WITH-YOUR-API-KEY";
+// Free key: https://www.alphavantage.co/support/#api-key
+
+// ============================================================
+// SETUP BANNER
+// ============================================================
+if (ALPHA_VANTAGE_KEY === "REPLACE-WITH-YOUR-API-KEY") {
+  document.getElementById('config-banner-slot').innerHTML = `
+    <div class="config-banner">
+      <strong>⚠️ Setup needed:</strong> Stocks need a free Alpha Vantage key.
+      Find <code>ALPHA_VANTAGE_KEY</code> near the top of the script in <code>index.html</code> and paste your key in.
+      Get one free (no card) at <a href="https://www.alphavantage.co/support/#api-key" target="_blank">alphavantage.co</a>.
+    </div>`;
+}
+
+// ============================================================
+// CRYPTO CONFIG
+// ============================================================
+const CRYPTO_IDS = {
+  'bitcoin':   { sym: 'BTC',  name: 'Bitcoin' },
+  'ripple':    { sym: 'XRP',  name: 'XRP' },
+  'ethereum':  { sym: 'ETH',  name: 'Ethereum' },
+  'solana':    { sym: 'SOL',  name: 'Solana' },
+  'cardano':   { sym: 'ADA',  name: 'Cardano' },
+  'chainlink': { sym: 'LINK', name: 'Chainlink' }
+};
+
+// Deep dive coins
+const DEEP_COINS = [
+  { id: 'bitcoin', sym: 'BTC', name: 'Bitcoin',  newsQuery: 'Bitcoin BTC price' },
+  { id: 'ripple',  sym: 'XRP', name: 'XRP',      newsQuery: 'XRP Ripple price' },
+  { id: 'ethereum',sym: 'ETH', name: 'Ethereum', newsQuery: 'Ethereum ETH price' }
+];
+
+const STOCKS = [
+  { sym: 'NVDA', name: 'NVIDIA' },
+  { sym: 'DAWN', name: 'Day One Biopharmaceuticals' }
+];
+
+// ============================================================
+// CACHE — 30 min TTL
+// ============================================================
+const cache = new Map();
+const CACHE_TTL = 30 * 60 * 1000;
+
+function cacheGet(k) {
+  const e = cache.get(k);
+  if (!e) return null;
+  if (Date.now() - e.t > CACHE_TTL) { cache.delete(k); return null; }
+  return e.v;
+}
+function cacheSet(k, v) { cache.set(k, { t: Date.now(), v }); }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ============================================================
+// FORMATTERS
+// ============================================================
+const fmtPrice = n => {
+  if (n == null || isNaN(n)) return '—';
+  if (n >= 1) return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 4 });
+};
+const fmtChange = pct => {
+  if (pct == null || isNaN(pct)) return '—';
+  return (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+};
+const changeClass = pct => pct >= 0 ? 'change-pos' : 'change-neg';
+
+function longTermSignal(d7, d30, dLong) {
+  const s = (d7||0)*0.2 + (d30||0)*0.3 + (dLong||0)*0.5;
+  if (s > 8)  return { label: 'Accumulation phase', cls: 'signal-bull', tone: 'Multi-month uptrend intact.' };
+  if (s > 0)  return { label: 'Mild bullish',        cls: 'signal-bull', tone: 'Positive bias on longer timeframes.' };
+  if (s > -8) return { label: 'Consolidation',       cls: 'signal-neutral', tone: 'Range-bound. Watch for breakout.' };
+  return              { label: 'Drawdown',            cls: 'signal-bear', tone: 'Downtrend — historically a DCA window.' };
+}
+
+function sparkline(values, w=200, h=32, color='#1f7a3a') {
+  if (!values || values.length < 2) return '';
+  const min = Math.min(...values), max = Math.max(...values);
+  const range = max - min || 1;
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length-1)) * w;
+    const y = h - ((v-min)/range)*h;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return `<svg class="sparkline" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>`;
+}
+
+function timeAgo(date) {
+  const s = (Date.now() - new Date(date).getTime()) / 1000;
+  if (s < 3600) return Math.round(s/60) + 'm ago';
+  if (s < 86400) return Math.round(s/3600) + 'h ago';
+  return Math.round(s/86400) + 'd ago';
+}
+
+// ============================================================
+// RSS PARSER
+// ============================================================
+function decodeEntities(s) {
+  if (!s) return '';
+  return s.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+          .replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&apos;/g,"'")
+          .replace(/&#(\d+);/g,(_,n)=>String.fromCharCode(parseInt(n)));
+}
+
+function stripHtml(html) {
+  if (!html) return '';
+  html = html.replace(/<!\[CDATA\[/g,'').replace(/\]\]>/g,'');
+  const t = document.createElement('div');
+  t.innerHTML = html;
+  return (t.textContent||t.innerText||'').replace(/\s+/g,' ').trim();
+}
+
+function parseRSS(xml) {
+  const items = [];
+  for (const m of xml.matchAll(/<item>([\s\S]*?)<\/item>/g)) {
+    const b = m[1];
+    const get = (tag) => {
+      const r = b.match(new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`));
+      return r ? decodeEntities(stripHtml(r[1])) : '';
+    };
+    const title = get('title');
+    const link  = get('link');
+    const date  = get('pubDate');
+    const desc  = get('description');
+    // Extract a meaningful body — description often has a snippet
+    const body  = desc.length > 30 ? desc : '';
+    if (title) items.push({ title, link, date, body });
+  }
+  return items;
+}
+
+async function fetchRSS(query) {
+  const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-GB&gl=GB&ceid=GB:en`;
+  const proxies = [
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(rssUrl)}`,
+    `https://corsproxy.io/?${encodeURIComponent(rssUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`
+  ];
+  for (const p of proxies) {
+    try {
+      const res = await fetch(p, { signal: AbortSignal.timeout(15000) });
+      if (!res.ok) continue;
+      const xml = await res.text();
+      if (xml && xml.includes('<item>')) return parseRSS(xml);
+    } catch {}
+  }
+  return [];
+}
+
+// ============================================================
+// CRYPTO PRICE SECTION (all 6 coins)
+// ============================================================
+async function loadCrypto() {
+  const grid = document.getElementById('crypto-grid');
+  const cached = cacheGet('crypto-all');
+  if (cached) { renderCryptoGrid(grid, cached); return; }
+  try {
+    const ids = Object.keys(CRYPTO_IDS).join(',');
+    const res = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&price_change_percentage=24h,7d,30d,1y&sparkline=true`);
+    if (!res.ok) throw new Error('CoinGecko ' + res.status);
+    const data = await res.json();
+    cacheSet('crypto-all', data);
+    renderCryptoGrid(grid, data);
+  } catch (e) {
+    grid.innerHTML = `<div class="error">Crypto unavailable: ${e.message}</div>`;
+  }
+}
+
+function renderCryptoGrid(grid, data) {
+  grid.innerHTML = data.map(c => {
+    const meta = CRYPTO_IDS[c.id];
+    if (!meta) return '';
+    const d24 = c.price_change_percentage_24h_in_currency;
+    const d7  = c.price_change_percentage_7d_in_currency;
+    const d30 = c.price_change_percentage_30d_in_currency;
+    const d1y = c.price_change_percentage_1y_in_currency;
+    const sig = longTermSignal(d7, d30, d1y);
+    const fromAth = ((c.current_price - c.ath) / c.ath * 100);
+    const sc = d30 >= 0 ? '#1f7a3a' : '#c8362d';
+    return `
+      <div class="asset">
+        <div class="asset-row">
+          <span class="asset-symbol">${meta.sym}</span>
+          <span class="asset-name">${meta.name}</span>
+          <div>
+            <div class="asset-price">${fmtPrice(c.current_price)}</div>
+            <div class="asset-change ${changeClass(d24)}">${fmtChange(d24)} 24h</div>
+          </div>
+        </div>
+        ${sparkline(c.sparkline_in_7d?.price||[], 200, 32, sc)}
+        <div class="asset-analysis">
+          <span class="label">7d</span><span class="${changeClass(d7)}">${fmtChange(d7)}</span> ·
+          <span class="label">30d</span><span class="${changeClass(d30)}">${fmtChange(d30)}</span> ·
+          <span class="label">1y</span><span class="${changeClass(d1y)}">${fmtChange(d1y)}</span>
+          <span class="signal ${sig.cls}">${sig.label}</span>
+          <div style="margin-top:8px">
+            <span class="label">From ATH</span>${fromAth.toFixed(1)}% ·
+            <span class="label">Note</span>${sig.tone}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ============================================================
+// CRYPTO DEEP DIVE — BTC, XRP, ETH with full news articles
+// ============================================================
+async function loadCryptoDeep() {
+  const container = document.getElementById('crypto-deep');
+
+  // First get price data (reuse cache from loadCrypto if available)
+  let priceData = cacheGet('crypto-all');
+  if (!priceData) {
+    try {
+      const ids = DEEP_COINS.map(c=>c.id).join(',');
+      const res = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&price_change_percentage=24h,7d,30d&sparkline=false`);
+      if (!res.ok) throw new Error('CoinGecko ' + res.status);
+      priceData = await res.json();
+    } catch {}
+  }
+
+  // Also fetch general crypto news
+  const generalNews = await fetchRSS('cryptocurrency news');
+
+  container.innerHTML = '';
+
+  // Render each coin card
+  for (const coin of DEEP_COINS) {
+    const priceEntry = priceData?.find(p => p.id === coin.id);
+    const newsItems = await fetchRSS(coin.newsQuery);
+
+    const d24 = priceEntry?.price_change_percentage_24h_in_currency;
+    const d7  = priceEntry?.price_change_percentage_7d_in_currency;
+    const d30 = priceEntry?.price_change_percentage_30d_in_currency;
+    const price = priceEntry?.current_price;
+    const sig = priceEntry ? longTermSignal(d7, d30, d30) : null;
+
+    const newsHtml = newsItems.slice(0, 4).map(item => {
+      const cleanTitle = item.title.replace(/ - [^-]+$/, '').trim();
+      const sourceMatch = item.title.match(/ - ([^-]+)$/);
+      const source = sourceMatch ? sourceMatch[1].trim().slice(0, 40) : 'News';
+      const ago = item.date ? timeAgo(item.date) : '';
+      const body = item.body && item.body.length > 40
+        ? item.body
+        : `This article covers the latest developments around ${coin.name} (${coin.sym}) and factors influencing its price movement. Tap to read the full story.`;
+      return `
+        <div class="crypto-news-item">
+          <div class="crypto-news-meta">
+            <span class="crypto-news-source">${source}</span>
+            ${ago ? `<span class="dot"></span><span>${ago}</span>` : ''}
+          </div>
+          <div class="crypto-news-title">${cleanTitle}</div>
+          <div class="crypto-news-body">${body}</div>
+          <a class="crypto-news-link" href="${item.link}" target="_blank" rel="noopener">Read full article →</a>
+        </div>`;
+    }).join('') || `<div class="crypto-news-item"><div class="crypto-news-body" style="color:var(--text-faint)">No recent news found for ${coin.name}.</div></div>`;
+
+    const card = document.createElement('div');
+    card.className = 'crypto-card';
+    card.innerHTML = `
+      <div class="crypto-card-header">
+        <span class="asset-symbol">${coin.sym}</span>
+        <span class="asset-name">${coin.name}</span>
+        <div>
+          ${price != null ? `<div class="asset-price">${fmtPrice(price)}</div>` : ''}
+          ${d24 != null ? `<div class="asset-change ${changeClass(d24)}">${fmtChange(d24)} 24h</div>` : ''}
+          ${sig ? `<div style="margin-top:4px"><span class="signal ${sig.cls}">${sig.label}</span></div>` : ''}
+        </div>
+      </div>
+      <div class="crypto-card-body">${newsHtml}</div>`;
+    container.appendChild(card);
+  }
+
+  // General crypto news card
+  if (generalNews.length) {
+    const genHtml = generalNews.slice(0, 5).map(item => {
+      const cleanTitle = item.title.replace(/ - [^-]+$/, '').trim();
+      const sourceMatch = item.title.match(/ - ([^-]+)$/);
+      const source = sourceMatch ? sourceMatch[1].trim().slice(0, 40) : 'News';
+      const ago = item.date ? timeAgo(item.date) : '';
+      const body = item.body && item.body.length > 40 ? item.body : 'Tap to read the full article.';
+      return `
+        <div class="crypto-news-item">
+          <div class="crypto-news-meta">
+            <span class="crypto-news-source">${source}</span>
+            ${ago ? `<span class="dot"></span><span>${ago}</span>` : ''}
+          </div>
+          <div class="crypto-news-title">${cleanTitle}</div>
+          <div class="crypto-news-body">${body}</div>
+          <a class="crypto-news-link" href="${item.link}" target="_blank" rel="noopener">Read full article →</a>
+        </div>`;
+    }).join('');
+
+    const genCard = document.createElement('div');
+    genCard.className = 'crypto-card';
+    genCard.innerHTML = `
+      <div class="crypto-card-header" style="grid-template-columns:1fr">
+        <div>
+          <div style="font-family:var(--serif);font-size:1.2rem;font-weight:500">General Crypto News</div>
+          <div style="font-size:0.78rem;color:var(--text-faint);margin-top:2px;text-transform:uppercase;letter-spacing:0.1em">Market · Regulation · Trends</div>
+        </div>
+      </div>
+      <div class="crypto-card-body">${genHtml}</div>`;
+    container.appendChild(genCard);
+  }
+}
+
+// ============================================================
+// STOCKS via Alpha Vantage
+// ============================================================
+async function fetchAlphaVantage(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('AlphaV ' + res.status);
+  const j = await res.json();
+  if (j["Note"])        throw new Error('rate-limited');
+  if (j["Information"]) throw new Error('daily limit reached');
+  if (j["Error Message"]) throw new Error('symbol not found');
+  return j;
+}
+
+function processSeriesData(series) {
+  const dates = Object.keys(series).sort().reverse();
+  if (dates.length < 2) throw new Error('insufficient data');
+  const closes = dates.map(d => parseFloat(series[d]["4. close"]));
+  const last = closes[0], prev = closes[1];
+  return {
+    last,
+    d24: ((last-prev)/prev)*100,
+    d7:  ((last-closes[Math.min(5,closes.length-1)])/closes[Math.min(5,closes.length-1)])*100,
+    d30: ((last-closes[Math.min(21,closes.length-1)])/closes[Math.min(21,closes.length-1)])*100,
+    closes: closes.slice(0,60).reverse(),
+    stale: false
+  };
+}
+
+async function loadStocks() {
+  const grid = document.getElementById('stocks-grid');
+  if (ALPHA_VANTAGE_KEY === "REPLACE-WITH-YOUR-API-KEY") {
+    grid.innerHTML = `<div class="error">Add your Alpha Vantage key (see banner above).</div>`;
+    return;
+  }
+  const results = [];
+  for (let i = 0; i < STOCKS.length; i++) {
+    const s = STOCKS[i];
+    grid.innerHTML = results.map(renderStockCard).join('') +
+      `<div class="progress-text">Loading ${s.sym} (${i+1}/${STOCKS.length})…</div>`;
+
+    let q = cacheGet('stock:'+s.sym);
+    if (!q) {
+      try {
+        const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${s.sym}&outputsize=compact&apikey=${ALPHA_VANTAGE_KEY}`;
+        const j = await fetchAlphaVantage(url);
+        q = processSeriesData(j["Time Series (Daily)"]);
+        cacheSet('stock:'+s.sym, q);
+      } catch (err) {
+        results.push({ ...s, ok: false, err: err.message });
+        if (i < STOCKS.length-1) await sleep(13000);
+        continue;
+      }
+    }
+    results.push({ ...s, ...q, ok: true });
+    if (i < STOCKS.length-1 && !cacheGet('stock:'+STOCKS[i+1].sym)) {
+      grid.innerHTML = results.map(renderStockCard).join('') +
+        `<div class="progress-text">Waiting 13s for rate limit, then loading ${STOCKS[i+1].sym}…</div>`;
+      await sleep(13000);
+    }
+  }
+  grid.innerHTML = results.map(renderStockCard).join('');
+}
+
+function renderStockCard(s) {
+  if (!s.ok) return `<div class="asset"><div class="asset-row">
+    <span class="asset-symbol">${s.sym}</span>
+    <span class="asset-name">${s.name}</span>
+    <div style="color:var(--red);font-size:0.85rem">${s.err}</div>
+  </div></div>`;
+  const sc = s.d30 >= 0 ? '#1f7a3a' : '#c8362d';
+  const sig = longTermSignal(s.d7, s.d30, s.d30);
+  return `
+    <div class="asset">
+      <div class="asset-row">
+        <span class="asset-symbol">${s.sym}</span>
+        <span class="asset-name">${s.name}</span>
+        <div>
+          <div class="asset-price">${fmtPrice(s.last)}</div>
+          <div class="asset-change ${changeClass(s.d24)}">${fmtChange(s.d24)} day</div>
+        </div>
+      </div>
+      ${sparkline(s.closes, 200, 32, sc)}
+      <div class="asset-analysis">
+        <span class="label">7d</span><span class="${changeClass(s.d7)}">${fmtChange(s.d7)}</span> ·
+        <span class="label">30d</span><span class="${changeClass(s.d30)}">${fmtChange(s.d30)}</span>
+        <span class="signal ${sig.cls}">${sig.label}</span>
+        <div style="margin-top:8px"><span class="label">Note</span>${sig.tone}</div>
+      </div>
+    </div>`;
+}
+
+// ============================================================
+// NEWS FEEDS — full body text shown on page
+// ============================================================
+async function loadNewsFeed(targetId, query, limit=6) {
+  const target = document.getElementById(targetId);
+  const cached = cacheGet('news:'+targetId);
+  if (cached) { renderNewsFull(target, cached, limit); return; }
+
+  const items = await fetchRSS(query);
+  if (!items.length) {
+    target.innerHTML = `<div class="error">News unavailable — try refreshing.</div>`;
+    return;
+  }
+  cacheSet('news:'+targetId, items);
+  renderNewsFull(target, items, limit);
+}
+
+function renderNewsFull(target, items, limit) {
+  target.innerHTML = items.slice(0, limit).map(item => {
+    const cleanTitle = item.title.replace(/ - [^-]+$/, '').trim();
+    const sourceMatch = item.title.match(/ - ([^-]+)$/);
+    const source = sourceMatch ? sourceMatch[1].trim().slice(0, 40) : 'News';
+    const ago = item.date ? timeAgo(item.date) : '';
+    const body = item.body && item.body.length > 40
+      ? item.body
+      : '';
+    return `
+      <div class="news-item">
+        <div class="news-item-meta">
+          <span class="news-item-source">${source}</span>
+          ${ago ? `<span class="dot"></span><span>${ago}</span>` : ''}
+        </div>
+        <div class="news-item-title">${cleanTitle}</div>
+        ${body ? `<div class="news-item-body">${body}</div>` : ''}
+        <a class="news-item-link" href="${item.link}" target="_blank" rel="noopener">Read full article →</a>
+      </div>`;
+  }).join('');
+}
+
+// ============================================================
+// HEADER
+// ============================================================
+function updateHeader() {
+  const now = new Date();
+  document.getElementById('current-date').textContent =
+    now.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  document.getElementById('current-time').textContent =
+    now.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+  document.getElementById('last-updated').textContent =
+    'Updated ' + now.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+  const days = Math.floor((now - new Date('2026-04-25')) / 86400000) + 1;
+  document.getElementById('brief-num').textContent = String(days).padStart(3,'0');
+}
+
+// ============================================================
+// MAIN — load everything
+// ============================================================
+async function loadAll(force=false) {
+  if (force) cache.clear();
+  updateHeader();
+
+  // These are independent — run in parallel
+  loadCrypto();
+  loadCryptoDeep();
+  loadNewsFeed('world-news',    'world news',               6);
+  loadNewsFeed('conflict-news', 'war cyberattack hacking',  6);
+  loadNewsFeed('travel-news',   'travel restrictions advisory', 5);
+  loadNewsFeed('uk-us-news',    'UK US news',               6);
+
+  // Stocks need pacing — run after
+  await loadStocks();
+}
+
+loadAll();
+setInterval(() => loadAll(false), 30 * 60 * 1000);
+</script>
+</body>
+</html>
