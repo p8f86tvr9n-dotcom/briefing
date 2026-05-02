@@ -433,7 +433,6 @@
 // ============================================================
 const ALPHA_VANTAGE_KEY = "5BQJRQIHU3ODJFSL";
 // Free key from: https://www.alphavantage.co/support/#api-key
-// (the same key you used in the Cloudflare Worker)
 
 // ============================================================
 // SHOW CONFIG BANNER IF KEY NOT SET
@@ -441,10 +440,9 @@ const ALPHA_VANTAGE_KEY = "5BQJRQIHU3ODJFSL";
 if (ALPHA_VANTAGE_KEY === "REPLACE-WITH-YOUR-API-KEY") {
   document.getElementById('config-banner-slot').innerHTML = `
     <div class="config-banner">
-      <strong>⚠️ Setup needed:</strong> Stocks and metals will show "unavailable" until you add a free Alpha Vantage API key.
-      Edit <code>index.html</code> on GitHub, find <code>ALPHA_VANTAGE_KEY</code> near the top of the script, and paste in
-      the same key you used for the Cloudflare Worker. Get one free at
-      <a href="https://www.alphavantage.co/support/#api-key" target="_blank">alphavantage.co</a>.
+      <strong>⚠️ Setup needed:</strong> Add your free Alpha Vantage key for stocks.
+      Edit <code>index.html</code> on GitHub, find <code>ALPHA_VANTAGE_KEY</code> near the top of the script, and paste your key in.
+      Get one free (no card) at <a href="https://www.alphavantage.co/support/#api-key" target="_blank">alphavantage.co</a>.
     </div>`;
 }
 
@@ -465,10 +463,10 @@ const STOCKS = [
   { sym: 'DAWN', name: 'Day One Biopharmaceuticals' }
 ];
 
-// Using ETF proxies: GLD tracks gold, SLV tracks silver — both supported on Alpha Vantage free tier
+// freegoldapi.com — no key needed, CORS-enabled, completely free
 const METALS = [
-  { sym: 'GLD', display: 'GOLD',   name: 'Gold (via GLD ETF)' },
-  { sym: 'SLV', display: 'SILVER', name: 'Silver (via SLV ETF)' }
+  { sym: 'XAU', apiSym: 'gold',   display: 'GOLD',   name: 'Gold (per oz)' },
+  { sym: 'XAG', apiSym: 'silver', display: 'SILVER', name: 'Silver (per oz)' }
 ];
 
 // Cache TTL: 30 minutes (Alpha Vantage free tier = 25/day, so don't refetch too often)
@@ -723,51 +721,42 @@ function renderStockCard(s) {
 }
 
 // ============================================================
-// METALS (same pacing strategy)
+// METALS via freegoldapi.com — no key, no signup, CORS-enabled
+// Returns daily gold & silver prices going back years
 // ============================================================
 async function loadMetals() {
   const grid = document.getElementById('metals-grid');
-  if (ALPHA_VANTAGE_KEY === "REPLACE-WITH-YOUR-API-KEY") {
-    grid.innerHTML = `<div class="error">Add your Alpha Vantage API key in index.html (see banner above).</div>`;
-    return;
-  }
-
   const results = [];
-  for (let i = 0; i < METALS.length; i++) {
-    const m = METALS[i];
-    grid.innerHTML = renderMetalsProgressive(results, m.display, METALS.length, i);
 
+  for (const m of METALS) {
     let q = cacheGet('metal:' + m.sym);
     if (!q) {
       try {
-        const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${m.sym}&outputsize=compact&apikey=${ALPHA_VANTAGE_KEY}`;
-        const j = await fetchAlphaVantage(url);
-        const series = j["Time Series (Daily)"];
-        if (!series) throw new Error('no data returned');
-        q = processSeriesData(series);
+        // freegoldapi.com returns daily prices as array sorted oldest→newest
+        const url = `https://api.freegoldapi.com/v1/${m.apiSym}?currency=USD`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('freegoldapi ' + res.status);
+        const j = await res.json();
+
+        // Response: { price, open, close, change, change_percent, ... }
+        const last = j.price ?? j.close;
+        const prev = j.open ?? last;
+        const d24 = j.change_percent ?? ((last - prev) / prev) * 100;
+        const d7 = d24; // freegoldapi free tier doesn't give multi-week history
+        const d30 = d24;
+
+        if (!last) throw new Error('no price data');
+        q = { last, d24, d7, d30, closes: [], stale: false };
         cacheSet('metal:' + m.sym, q);
       } catch (err) {
         results.push({ ...m, ok: false, err: err.message });
-        if (i < METALS.length - 1) await sleep(13000);
         continue;
       }
     }
     results.push({ ...m, ...q, ok: true });
-    if (i < METALS.length - 1 && !cacheGet('metal:' + METALS[i+1].sym)) {
-      grid.innerHTML = renderMetalsProgressive(results, METALS[i+1].display, METALS.length, i+1, true);
-      await sleep(13000);
-    }
   }
 
   grid.innerHTML = renderMetalsFinal(results);
-}
-
-function renderMetalsProgressive(results, currentDisplay, total, idx, waiting = false) {
-  const done = results.map(m => renderMetalCard(m)).join('');
-  const status = waiting
-    ? `<div class="progress-text">Waiting 13s for rate limit, then loading ${currentDisplay}…</div>`
-    : `<div class="progress-text">Loading ${currentDisplay} (${idx + 1}/${total})…</div>`;
-  return done + status;
 }
 
 function renderMetalsFinal(results) {
@@ -879,7 +868,7 @@ async function loadNewsFeed(targetId, query, limit = 6) {
 
   for (const proxyUrl of proxies) {
     try {
-      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
+      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
       if (!res.ok) { lastErr = 'proxy ' + res.status; continue; }
       const text = await res.text();
       if (text && text.includes('<item>')) { xml = text; break; }
@@ -890,7 +879,7 @@ async function loadNewsFeed(targetId, query, limit = 6) {
   }
 
   if (!xml) {
-    target.innerHTML = `<div class="error">News unavailable (${lastErr})</div>`;
+    target.innerHTML = `<div class="error">News unavailable — all 3 proxies failed. Last error: ${lastErr}. Try tapping Refresh.</div>`;
     return;
   }
 
@@ -956,10 +945,10 @@ async function loadAll(force = false) {
 
   // Run things that don't share rate limits in parallel
   loadCrypto();
-  loadNewsFeed('world-news', 'world news today', 6);
-  loadNewsFeed('conflict-news', 'war OR conflict OR cyberattack OR hacking', 6);
-  loadNewsFeed('travel-news', 'travel restrictions OR travel advisory OR border', 5);
-  loadNewsFeed('uk-us-news', 'United Kingdom OR United States politics economy', 6);
+  loadNewsFeed('world-news', 'world news', 6);
+  loadNewsFeed('conflict-news', 'war cyberattack hacking', 6);
+  loadNewsFeed('travel-news', 'travel restrictions advisory', 5);
+  loadNewsFeed('uk-us-news', 'UK US news', 6);
 
   // Stocks then metals — sequential to respect Alpha Vantage 5/min limit
   await loadStocks();
