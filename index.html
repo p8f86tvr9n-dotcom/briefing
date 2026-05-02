@@ -465,9 +465,10 @@ const STOCKS = [
   { sym: 'DAWN', name: 'Day One Biopharmaceuticals' }
 ];
 
+// Using ETF proxies: GLD tracks gold, SLV tracks silver — both supported on Alpha Vantage free tier
 const METALS = [
-  { from: 'XAU', to: 'USD', display: 'GOLD',   name: 'Gold (per oz)' },
-  { from: 'XAG', to: 'USD', display: 'SILVER', name: 'Silver (per oz)' }
+  { sym: 'GLD', display: 'GOLD',   name: 'Gold (via GLD ETF)' },
+  { sym: 'SLV', display: 'SILVER', name: 'Silver (via SLV ETF)' }
 ];
 
 // Cache TTL: 30 minutes (Alpha Vantage free tier = 25/day, so don't refetch too often)
@@ -736,15 +737,15 @@ async function loadMetals() {
     const m = METALS[i];
     grid.innerHTML = renderMetalsProgressive(results, m.display, METALS.length, i);
 
-    let q = cacheGet('metal:' + m.from);
+    let q = cacheGet('metal:' + m.sym);
     if (!q) {
       try {
-        const url = `https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=${m.from}&to_symbol=${m.to}&outputsize=compact&apikey=${ALPHA_VANTAGE_KEY}`;
+        const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${m.sym}&outputsize=compact&apikey=${ALPHA_VANTAGE_KEY}`;
         const j = await fetchAlphaVantage(url);
-        const series = j["Time Series FX (Daily)"];
+        const series = j["Time Series (Daily)"];
         if (!series) throw new Error('no data returned');
         q = processSeriesData(series);
-        cacheSet('metal:' + m.from, q);
+        cacheSet('metal:' + m.sym, q);
       } catch (err) {
         results.push({ ...m, ok: false, err: err.message });
         if (i < METALS.length - 1) await sleep(13000);
@@ -752,7 +753,7 @@ async function loadMetals() {
       }
     }
     results.push({ ...m, ...q, ok: true });
-    if (i < METALS.length - 1 && !cacheGet('metal:' + METALS[i+1].from)) {
+    if (i < METALS.length - 1 && !cacheGet('metal:' + METALS[i+1].sym)) {
       grid.innerHTML = renderMetalsProgressive(results, METALS[i+1].display, METALS.length, i+1, true);
       await sleep(13000);
     }
@@ -865,15 +866,37 @@ async function loadNewsFeed(targetId, query, limit = 6) {
   const cached = cacheGet(cacheKey);
   if (cached) { renderNews(target, cached, limit); return; }
 
-  try {
-    const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en&gl=US&ceid=US:en`;
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`;
-    const res = await fetch(proxyUrl);
-    if (!res.ok) throw new Error('proxy ' + res.status);
-    const xml = await res.text();
-    const items = parseRSS(xml);
-    if (items.length === 0) throw new Error('no articles parsed');
+  const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-GB&gl=GB&ceid=GB:en`;
 
+  const proxies = [
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(rssUrl)}`,
+    `https://corsproxy.io/?${encodeURIComponent(rssUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`
+  ];
+
+  let xml = null;
+  let lastErr = '';
+
+  for (const proxyUrl of proxies) {
+    try {
+      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) { lastErr = 'proxy ' + res.status; continue; }
+      const text = await res.text();
+      if (text && text.includes('<item>')) { xml = text; break; }
+      lastErr = 'empty response';
+    } catch (e) {
+      lastErr = e.message || 'fetch error';
+    }
+  }
+
+  if (!xml) {
+    target.innerHTML = `<div class="error">News unavailable (${lastErr})</div>`;
+    return;
+  }
+
+  try {
+    const items = parseRSS(xml);
+    if (items.length === 0) throw new Error('no articles found');
     cacheSet(cacheKey, items);
     renderNews(target, items, limit);
   } catch (e) {
