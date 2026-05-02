@@ -448,19 +448,29 @@ async function loadCryptoAnalysis() {
   if(cached) { el.innerHTML=cached; return; }
 
   if(NEWSDATA_KEY.includes('REPLACE')) {
-    el.innerHTML='<div class="error">Add your NewsData.io key to see crypto news (see banner above).</div>'; return;
+    el.innerHTML='<div class="error">Add your NewsData.io key (see banner above).</div>'; return;
   }
 
   const prices = cget('prices');
-  const deepCoins = [
-    { id:'bitcoin',  sym:'BTC', name:'Bitcoin',  q:'bitcoin cryptocurrency' },
-    { id:'ripple',   sym:'XRP', name:'XRP',      q:'XRP Ripple cryptocurrency' },
-    { id:'ethereum', sym:'ETH', name:'Ethereum', q:'ethereum cryptocurrency' }
-  ];
-
   el.innerHTML='<div class="loading">Fetching crypto news…</div>';
 
-  const cards=[];
+  const cards = [];
+
+  // ONE single request covering all three coins + general crypto
+  let allCryptoArticles = [];
+  try {
+    allCryptoArticles = await fetchNews({ q:'bitcoin OR XRP OR ethereum cryptocurrency', size:10 });
+  } catch(e) {
+    try {
+      allCryptoArticles = await fetchNews({ category:'technology', q:'crypto bitcoin', size:10 });
+    } catch {}
+  }
+
+  const deepCoins = [
+    { id:'bitcoin',  sym:'BTC', name:'Bitcoin',  terms:['bitcoin','btc'] },
+    { id:'ripple',   sym:'XRP', name:'XRP',      terms:['xrp','ripple'] },
+    { id:'ethereum', sym:'ETH', name:'Ethereum', terms:['ethereum','eth'] }
+  ];
 
   for(const coin of deepCoins) {
     const price = prices?.find(p=>p.id===coin.id);
@@ -469,22 +479,23 @@ async function loadCryptoAnalysis() {
     const d30 = price?.price_change_percentage_30d_in_currency;
     const s   = price ? sig(d7,d30,d30) : null;
 
-    let articles=[];
-    try {
-      articles = await fetchNews({ q: coin.q, size: 4 });
-    } catch(e) { console.warn(coin.sym, e); }
+    // Filter articles relevant to this coin from the single batch fetch
+    const coinArticles = allCryptoArticles.filter(a => {
+      const text = ((a.title||'')+(a.description||'')).toLowerCase();
+      return coin.terms.some(t => text.includes(t));
+    }).slice(0,3);
 
-    const articlesHtml = articles.length ? articles.map(a=>{
-      const body = a.description || a.content || `Latest developments around ${coin.name} — tap to read the full story.`;
+    const articlesHtml = coinArticles.length ? coinArticles.map(a=>{
+      const body = a.description || a.content || '';
       const time = a.pubDate ? ago(a.pubDate) : '';
       return `<div class="ca-article">
         <div class="ca-article-meta">${a.source_name||'News'}${time?' · '+time:''}</div>
         <div class="ca-article-title">${a.title||'News'}</div>
-        <div class="ca-article-body">${body}</div>
+        ${body?`<div class="ca-article-body">${body}</div>`:''}
         <a class="ca-article-link" href="${a.link||'#'}" target="_blank" rel="noopener">Read full article →</a>
       </div>`;
     }).join('')
-    : `<div class="ca-article"><div class="ca-article-body" style="color:var(--text-faint)">No recent news found.</div></div>`;
+    : `<div class="ca-article"><div class="ca-article-body" style="color:var(--text-faint)">No specific news found — check general crypto section below.</div></div>`;
 
     cards.push(`<div class="ca-card">
       <div class="ca-header">
@@ -500,31 +511,29 @@ async function loadCryptoAnalysis() {
     </div>`);
   }
 
-  // General crypto market news
-  try {
-    const genArticles = await fetchNews({ category:'technology', q:'cryptocurrency market', size:4 });
-    if(genArticles.length) {
-      const genHtml = genArticles.map(a=>{
-        const body = a.description||a.content||'';
-        const time = a.pubDate?ago(a.pubDate):'';
-        return `<div class="ca-article">
-          <div class="ca-article-meta">${a.source_name||'News'}${time?' · '+time:''}</div>
-          <div class="ca-article-title">${a.title}</div>
-          ${body?`<div class="ca-article-body">${body}</div>`:''}
-          <a class="ca-article-link" href="${a.link||'#'}" target="_blank" rel="noopener">Read full article →</a>
-        </div>`;
-      }).join('');
-      cards.push(`<div class="ca-card">
-        <div class="ca-header" style="grid-template-columns:1fr">
-          <div>
-            <div style="font-family:var(--serif);font-size:1.1rem;font-weight:500">General Crypto Market</div>
-            <div style="font-size:0.73rem;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.1em;margin-top:2px">Regulation · Macro · Trends</div>
-          </div>
+  // General crypto — use remaining articles from the same batch
+  const generalArticles = allCryptoArticles.slice(0,5);
+  if(generalArticles.length) {
+    const genHtml = generalArticles.map(a=>{
+      const body = a.description||a.content||'';
+      const time = a.pubDate?ago(a.pubDate):'';
+      return `<div class="ca-article">
+        <div class="ca-article-meta">${a.source_name||'News'}${time?' · '+time:''}</div>
+        <div class="ca-article-title">${a.title}</div>
+        ${body?`<div class="ca-article-body">${body}</div>`:''}
+        <a class="ca-article-link" href="${a.link||'#'}" target="_blank" rel="noopener">Read full article →</a>
+      </div>`;
+    }).join('');
+    cards.push(`<div class="ca-card">
+      <div class="ca-header" style="grid-template-columns:1fr">
+        <div>
+          <div style="font-family:var(--serif);font-size:1.1rem;font-weight:500">General Crypto Market</div>
+          <div style="font-size:0.73rem;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.1em;margin-top:2px">Regulation · Macro · Trends</div>
         </div>
-        <div class="ca-body">${genHtml}</div>
-      </div>`);
-    }
-  } catch {}
+      </div>
+      <div class="ca-body">${genHtml}</div>
+    </div>`);
+  }
 
   const html = cards.join('');
   cset('crypto-analysis', html);
@@ -643,11 +652,16 @@ async function loadAll(force=false) {
   await loadCryptoPrices();
 
   // All news in parallel — NewsData.io handles concurrent requests fine
+  // Stagger news calls 2 seconds apart to avoid 429 rate limiting
   loadCryptoAnalysis();
-  loadNews('world-news',    { category:'world',         size:6 }, 6);
+  await sleep(2000);
+  loadNews('world-news',    { category:'world', size:6 }, 6);
+  await sleep(2000);
   loadNews('conflict-news', { q:'war cyber attack security threat', size:6 }, 6, { category:'politics', q:'conflict military', size:6 });
+  await sleep(2000);
   loadNews('travel-news',   { q:'travel ban visa border restrictions', size:5 }, 5, { category:'world', q:'travel advisory', size:5 });
-  loadNews('uk-us-news',    { country:'gb,us',          size:6 }, 6);
+  await sleep(2000);
+  loadNews('uk-us-news',    { country:'gb,us', size:6 }, 6);
 
   // Stocks — needs 13s pacing between calls
   loadStocks();
