@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trading Desk</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Trading Desk">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F3F5F1">
+<link rel="apple-touch-icon" href="desk-icon.png">
+<link rel="icon" type="image/png" href="desk-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: one phone-width column. The power switch leads; signals read as dealing slips with a status stripe on the left edge. Light only, large type. */
+  --bg:#F3F5F1;
+  --surface:#FFFFFF;
+  --ink:#15211B;
+  --muted:#56655D;
+  --line:#D7DDD6;
+  --accent:#2440C9;
+  --good:#0B7A45; --good-bg:#E2F3E8;
+  --warn:#855600; --warn-bg:#FAEFD2;
+  --bad:#B3261E;  --bad-bg:#FBE5E2;
+  --idle:#56655D; --idle-bg:#E9EDE8;
+  --font-display:"Bricolage Grotesque","Arial Narrow",Arial,sans-serif;
+  --font-body:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:17px;line-height:1.45}
+.wrap{max-width:680px;margin:0 auto;padding:20px 16px 56px;display:flex;flex-direction:column;gap:22px}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;line-height:1.1}
+h1{font-size:34px;font-weight:800;letter-spacing:-0.02em}
+h2{font-size:23px;font-weight:800;letter-spacing:-0.01em}
+h3{font-size:19px;font-weight:600}
+p{margin:0}
+.muted{color:var(--muted)}
+.small{font-size:15px}
+.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+header{display:flex;flex-direction:column;gap:4px}
+section{display:flex;flex-direction:column;gap:12px}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+/* power switch */
+.power{background:var(--surface);border:2px solid var(--ink);border-radius:18px;padding:18px;display:flex;align-items:center;gap:16px}
+.power-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.power-state{font-family:var(--font-display);font-weight:800;font-size:26px;line-height:1.1}
+.switch{flex:none;width:92px;height:52px;border-radius:999px;border:2px solid var(--ink);background:var(--idle-bg);position:relative;cursor:pointer;padding:0;transition:background .18s}
+.switch::after{content:"";position:absolute;top:4px;left:4px;width:40px;height:40px;border-radius:50%;background:var(--ink);transition:transform .18s}
+.switch[aria-checked="true"]{background:var(--good)}
+.switch[aria-checked="true"]::after{transform:translateX(40px);background:#fff}
+button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.switch,.switch::after{transition:none}}
+
+/* controls */
+.controls{display:flex;flex-direction:column;gap:14px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field>label,.field>.label{font-weight:600;font-size:15px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:2px solid var(--ink);border-radius:12px;overflow:hidden;background:var(--surface)}
+.seg button{font:inherit;font-weight:600;padding:12px 6px;background:transparent;border:0;border-left:2px solid var(--ink);color:var(--ink);cursor:pointer;min-height:48px}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+input[type=number],select{font:inherit;font-family:var(--font-mono);padding:11px 12px;border:2px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);width:100%;min-height:48px}
+details{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:0 16px}
+details>summary{cursor:pointer;font-weight:600;padding:14px 0;list-style-position:inside}
+details>.inner{padding:0 0 16px;display:flex;flex-direction:column;gap:14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip-btn{font:inherit;font-family:var(--font-mono);font-weight:600;font-size:15px;padding:8px 12px;border-radius:999px;border:2px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer;min-height:42px}
+.chip-btn[aria-pressed="true"]{border-color:var(--ink);color:var(--ink);background:var(--idle-bg)}
+.check{display:flex;align-items:center;gap:10px;font-weight:500}
+.check input{width:22px;height:22px;accent-color:var(--ink)}
+
+/* banners */
+.banner{border-radius:14px;padding:14px 16px;border:1px solid var(--line);background:var(--surface)}
+.banner.bad{background:var(--bad-bg);border-color:var(--bad);color:#5c120d}
+.banner.warn{background:var(--warn-bg);border-color:#d9b65a;color:#4a3000}
+.backdrop{border-left:6px solid var(--idle);border-radius:4px 14px 14px 4px}
+.backdrop.up{border-left-color:var(--good)} .backdrop.down{border-left-color:var(--bad)}
+
+/* pills */
+.pill{display:inline-block;font-family:var(--font-mono);font-weight:600;font-size:13px;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:6px;white-space:nowrap}
+.pill.buy{background:var(--good);color:#fff}
+.pill.watch{background:var(--warn-bg);color:var(--warn)}
+.pill.wait{background:var(--idle-bg);color:var(--idle)}
+.pill.avoid{background:var(--bad-bg);color:var(--bad)}
+.pill.nodata{background:transparent;color:var(--muted);border:1px dashed var(--line)}
+.pill.win{background:var(--good-bg);color:var(--good)}
+.pill.loss{background:var(--bad-bg);color:var(--bad)}
+
+/* tickets */
+.tickets{display:flex;flex-direction:column;gap:14px}
+.ticket{background:var(--surface);border:1px solid var(--line);border-left:8px solid var(--good);border-radius:6px 16px 16px 6px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.ticket.example{border-left-color:var(--idle);border-style:dashed;border-left-style:solid}
+.ticket-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.ticket-coin{font-family:var(--font-display);font-weight:800;font-size:28px;line-height:1}
+.ticket-sub{font-size:15px;color:var(--muted)}
+.levels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.level{background:var(--bg);border-radius:10px;padding:10px;min-width:0}
+.level .k{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.level .v{font-family:var(--font-mono);font-weight:600;font-size:18px;overflow-wrap:anywhere}
+.level .p{font-family:var(--font-mono);font-size:14px}
+.level.stop .p{color:var(--bad)} .level.target .p{color:var(--good)}
+.money{font-size:17px}
+.money b{font-family:var(--font-mono)}
+.why{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:16px}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:16px;color:var(--muted)}
+
+/* coin rows */
+.coins{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.coin{padding:12px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.coin:first-child{border-top:0}
+.coin-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.coin-name{font-family:var(--font-display);font-weight:800;font-size:20px;min-width:58px}
+.coin-price{font-family:var(--font-mono);font-weight:600}
+.chg{font-family:var(--font-mono);font-size:15px;margin-left:auto}
+.chg.up{color:var(--good)} .chg.down{color:var(--bad)}
+.coin-line{display:flex;gap:8px;align-items:baseline;font-size:15px}
+.coin-line .mode{flex:none;width:92px;color:var(--muted);font-weight:600}
+.coin-line .note{min-width:0}
+
+/* feed + record */
+.feed{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.feed-item{padding:11px 14px;border-top:1px solid var(--line);display:flex;gap:10px;font-size:16px}
+.feed-item:first-child{border-top:0}
+.feed-item time{flex:none;font-family:var(--font-mono);font-size:14px;color:var(--muted);width:86px;padding-top:2px}
+.score{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.score>div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;min-width:0}
+.score .k{font-size:13px;color:var(--muted);font-weight:600}
+.score .v{font-family:var(--font-mono);font-weight:600;font-size:20px;overflow-wrap:anywhere}
+.pos{color:var(--good)} .neg{color:var(--bad)}
+.btn{font:inherit;font-weight:600;padding:11px 16px;border-radius:10px;border:2px solid var(--ink);background:var(--surface);color:var(--ink);cursor:pointer;min-height:46px}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+.rules{padding-left:20px;margin:0;display:flex;flex-direction:column;gap:6px}
+@media (max-width:420px){
+  h1{font-size:30px}
+  .score{grid-template-columns:repeat(2,1fr)}
+  .level .v{font-size:16px}
+  .coin-line{flex-wrap:wrap}
+}
+.wrap{padding:max(20px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) calc(56px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+.seg{grid-template-columns:repeat(4,1fr)}
+.coin-line .mode{width:54px}
+.bt{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.bt-row{display:grid;grid-template-columns:0.8fr 1.1fr 0.9fr 0.7fr 0.9fr;gap:8px;padding:11px 14px;border-top:1px solid var(--line);align-items:baseline;font-size:15px}
+.bt-row:first-child{border-top:0;font-weight:600;color:var(--muted);font-size:12px;text-transform:uppercase}
+.bt-row span{min-width:0}
+.bt-row .num{font-weight:600}
+.past{font-size:15px;background:var(--bg);border-radius:10px;padding:9px 10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Trading Desk</h1>
+    <p class="muted">Rule-based crypto buy signals with a stop, a target and a stake sized to your risk limit.</p>
+  </header>
+
+  <div class="power">
+    <div class="power-text">
+      <div class="power-state" id="powerState">Desk is off</div>
+      <div class="muted small" id="statusLine">Turn it on to scan your coins. It rescans every 5 minutes until you turn it off.</div>
+    </div>
+    <button class="switch" id="power" role="switch" aria-checked="false" aria-label="Turn the trading desk on or off"></button>
+  </div>
+
+  <div id="pageError" hidden></div>
+
+  <div class="controls">
+    <div class="field">
+      <span class="label" id="modeLabel">What kind of trades?</span>
+      <div class="seg" role="group" aria-labelledby="modeLabel">
+        <button type="button" id="mode-short" aria-pressed="false">Short</button>
+        <button type="button" id="mode-swing" aria-pressed="false">Swing</button>
+        <button type="button" id="mode-long" aria-pressed="false">Long</button>
+        <button type="button" id="mode-all" aria-pressed="true">All</button>
+      </div>
+      <span class="muted small" id="modeHelp"></span>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="maxLoss">Most I'll lose on one trade</label>
+        <select id="maxLoss">
+          <option value="5">£5</option><option value="10">£10</option><option value="15">£15</option>
+          <option value="20">£20</option><option value="25">£25</option><option value="40">£40</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="minStake">Smallest stake (£)</label>
+        <input id="minStake" type="number" inputmode="numeric" min="10" max="5000" step="10">
+      </div>
+      <div class="field">
+        <label for="maxStake">Largest stake (£)</label>
+        <input id="maxStake" type="number" inputmode="numeric" min="10" max="5000" step="10">
+      </div>
+    </div>
+    <details>
+      <summary>Coins, fees, sound and screen</summary>
+      <div class="inner">
+        <div class="field">
+          <span class="label">Coins to scan</span>
+          <div class="chips" id="coinChips"></div>
+        </div>
+        <div class="field" style="max-width:260px">
+          <label for="feePct">Fee each way (%)</label>
+          <input id="feePct" type="number" inputmode="decimal" min="0" max="3" step="0.05">
+          <span class="muted small">Check your exchange. Fees are taken off every profit figure below.</span>
+        </div>
+        <label class="check" for="sound"><input type="checkbox" id="sound"> Beep when a new buy signal appears</label>
+        <label class="check" for="wake"><input type="checkbox" id="wake"> Keep the screen awake while the desk is on</label>
+      </div>
+    </details>
+  </div>
+
+  <div id="backdrop" hidden></div>
+
+  <section aria-labelledby="sigH">
+    <div class="sec-head"><h2 id="sigH">Buy signals now</h2><span class="muted small" id="sigMeta"></span></div>
+    <div class="tickets" id="tickets"></div>
+  </section>
+
+  <section aria-labelledby="coinH">
+    <div class="sec-head"><h2 id="coinH">Every coin</h2><span class="muted small">Prices in US dollars</span></div>
+    <div class="coins" id="coins"></div>
+  </section>
+
+  <section aria-labelledby="btH">
+    <div class="sec-head"><h2 id="btH">How these rules did on past prices</h2></div>
+    <p class="muted small">The desk replays its own rules over the price history it has for your coins, with fees taken off. A losing row is a good reason to leave that trade type alone. A winning row is not proof it will keep winning. Avg is the average result per trade.</p>
+    <div id="bt"></div>
+  </section>
+
+  <section aria-labelledby="feedH">
+    <div class="sec-head"><h2 id="feedH">Signal feed</h2></div>
+    <div id="feed"></div>
+  </section>
+
+  <section aria-labelledby="recH">
+    <div class="sec-head"><h2 id="recH">Paper record</h2><span class="muted small">Saved on this device</span></div>
+    <p class="muted small">Every buy signal is logged as a pretend trade and followed to its stop or target. No real money moves.</p>
+    <div class="score" id="score"></div>
+    <div id="trades"></div>
+    <div><button type="button" class="btn danger" id="clearRec">Clear paper record</button></div>
+  </section>
+
+  <details>
+    <summary>How the desk decides, and what it can't do</summary>
+    <div class="inner">
+      <ul class="rules">
+        <li><b>Pullback in an uptrend.</b> Price is above a rising 21-candle average, dips back to it, then closes higher. RSI between 40 and 68.</li>
+        <li><b>Breakout.</b> A candle closes above the highest price of the previous 20 candles on at least 1.5× normal volume.</li>
+        <li><b>Oversold bounce.</b> RSI falls below 30, turns up, and a candle closes above the previous candle's high. Riskier, so it scores lower.</li>
+        <li><b>Stop and target.</b> The stop sits below the recent low (1.2 to 3 times the average candle range). The target is twice that distance above entry.</li>
+        <li><b>Stake.</b> Sized so a stopped trade costs about your loss limit, fees included, kept inside your smallest and largest stake.</li>
+        <li><b>Filters.</b> Signals are marked down or skipped when the bigger trend is down, Bitcoin is falling, trading is thin, fees would eat the profit, or the rules have a losing record on that coin.</li>
+      </ul>
+      <p><b>Short</b> reads 1-hour candles with the 4-hour trend as backdrop. <b>Swing</b> reads 4-hour candles with the daily trend. <b>Long</b> reads daily candles with the weekly trend.</p>
+      <p><b>Limits.</b> The desk only scans while this app is open on screen. It buys only: no shorting. It never places trades. Prices come from public exchange feeds and can differ slightly from the price where you trade. No rule set wins every time, so treat the output as information, not personal financial advice, and never stake money you can't afford to lose.</p>
+      <p class="muted small" id="feedInfo"></p>
+    </div>
+  </details>
+</div>
+
+<script>
+/*ENGINE-START*/
+var Engine = (function(){
+  function extract(result){
+    var p = result && result.payload;
+    if (p && typeof p === 'object'){
+      if (Array.isArray(p.data)) return p.data;
+      if (p.result && Array.isArray(p.result.data)) return p.result.data;
+    }
+    var txt = typeof p === 'string' ? p : null;
+    if (!txt && result && Array.isArray(result.content)){
+      for (var i=0;i<result.content.length;i++){
+        var b = result.content[i];
+        if (b && b.type === 'text' && typeof b.text === 'string'){ txt = b.text; break; }
+      }
+    }
+    if (txt){
+      var a = txt.indexOf('{'), z = txt.lastIndexOf('}');
+      if (a >= 0 && z > a){
+        try{
+          var j = JSON.parse(txt.slice(a, z+1));
+          if (Array.isArray(j.data)) return j.data;
+          if (j.result && Array.isArray(j.result.data)) return j.result.data;
+        }catch(e){}
+      }
+    }
+    return null;
+  }
+  function toCandles(raw){
+    var out = [];
+    if (!Array.isArray(raw)) return out;
+    for (var i=0;i<raw.length;i++){
+      var r = raw[i]; if (!r) continue;
+      var ts = r.timestamp != null ? r.timestamp : r.t;
+      var t = typeof ts === 'number' ? ts : (/^\d+$/.test(String(ts)) ? Number(ts) : Date.parse(ts));
+      var o=+(r.open!=null?r.open:r.o), h=+(r.high!=null?r.high:r.h), l=+(r.low!=null?r.low:r.l), c=+(r.close!=null?r.close:r.c);
+      var v=+(r.volume_usd!=null?r.volume_usd:0);
+      if (!isFinite(t)||!isFinite(o)||!isFinite(h)||!isFinite(l)||!isFinite(c)||!(c>0)) continue;
+      out.push({t:t,o:o,h:h,l:l,c:c,v:isFinite(v)?v:0});
+    }
+    out.sort(function(x,y){return x.t-y.t;});
+    return out.filter(function(x,i){return i===0 || x.t!==out[i-1].t;});
+  }
+  function ema(vals,n){
+    var out = new Array(vals.length).fill(null);
+    if (vals.length < n) return out;
+    var s=0; for (var i=0;i<n;i++) s+=vals[i];
+    var e=s/n, k=2/(n+1); out[n-1]=e;
+    for (var j=n;j<vals.length;j++){ e = vals[j]*k + e*(1-k); out[j]=e; }
+    return out;
+  }
+  function rsi(closes,n){
+    n = n||14;
+    var out = new Array(closes.length).fill(null);
+    if (closes.length < n+1) return out;
+    var g=0,l=0,d;
+    for (var i=1;i<=n;i++){ d=closes[i]-closes[i-1]; if(d>0) g+=d; else l-=d; }
+    g/=n; l/=n;
+    function val(){ return l===0 ? (g===0?50:100) : 100-100/(1+g/l); }
+    out[n]=val();
+    for (var j=n+1;j<closes.length;j++){
+      d=closes[j]-closes[j-1];
+      g=(g*(n-1)+Math.max(d,0))/n; l=(l*(n-1)+Math.max(-d,0))/n;
+      out[j]=val();
+    }
+    return out;
+  }
+  function atr(bars,n){
+    n = n||14;
+    var out = new Array(bars.length).fill(null);
+    if (bars.length < n+1) return out;
+    var tr=[0];
+    for (var i=1;i<bars.length;i++){
+      var b=bars[i], pc=bars[i-1].c;
+      tr.push(Math.max(b.h-b.l, Math.abs(b.h-pc), Math.abs(b.l-pc)));
+    }
+    var s=0; for (var k=1;k<=n;k++) s+=tr[k];
+    var a=s/n; out[n]=a;
+    for (var j=n+1;j<bars.length;j++){ a=(a*(n-1)+tr[j])/n; out[j]=a; }
+    return out;
+  }
+  function trendOf(bars){
+    var n = bars ? bars.length : 0;
+    if (n >= 30){
+      var closes = bars.map(function(b){return b.c;});
+      var e9=ema(closes,9), e21=ema(closes,21), i=n-1, c=closes[i];
+      var slope = e21[i]-e21[i-3];
+      if (c>e21[i] && e9[i]>e21[i] && slope>0) return 'up';
+      if (c<e21[i] && e9[i]<e21[i] && slope<0) return 'down';
+      return 'side';
+    }
+    if (n >= 5){
+      var first=bars[0].c, last=bars[n-1].c, hi=-Infinity, lo=Infinity;
+      for (var k=0;k<n;k++){ if(bars[k].h>hi) hi=bars[k].h; if(bars[k].l<lo) lo=bars[k].l; }
+      var mid=(hi+lo)/2, chg=(last-first)/first;
+      if (chg>0.03 && last>mid) return 'up';
+      if (chg<-0.03 && last<mid) return 'down';
+      return 'side';
+    }
+    return 'unknown';
+  }
+  function clamp(x,a,b){ return Math.max(a, Math.min(b,x)); }
+
+  // sig: candles on the signal timeframe (oldest first). ctx: candles on the backdrop timeframe.
+  function analyse(o){
+    var sig=o.sig, tfMs=o.tfMs, now=o.now, st=o.settings;
+    if (!sig || sig.length < 31) return {status:'nodata', note:'Not enough price history on this feed yet.'};
+    var lastBar = sig[sig.length-1];
+    var inProgress = lastBar.t + tfMs > now;
+    var closed = inProgress ? sig.slice(0,-1) : sig;
+    var price = lastBar.c;
+    if (closed.length < 30) return {status:'nodata', note:'Not enough price history on this feed yet.', price:price};
+    var closes = closed.map(function(b){return b.c;});
+    var n=closed.length, i=n-1;
+    var e21=ema(closes,21), r=rsi(closes,14), a=atr(closed,14);
+    var bar=closed[i], prev=closed[i-1], A=a[i], R=r[i];
+    if (!(A>0) || R==null) return {status:'nodata', note:'Price has barely moved on this feed, so there is nothing to measure.', price:price};
+    var trend = trendOf(closed);
+    var ctxTrend = (o.ctx && o.ctx.length) ? trendOf(o.ctx) : 'unknown';
+
+    var volSum=0, volN=0, flat=0, hh=-Infinity;
+    for (var k=Math.max(0,i-20); k<i; k++){ volSum+=closed[k].v; volN++; if(closed[k].h===closed[k].l) flat++; if(closed[k].h>hh) hh=closed[k].h; }
+    var volAvg = volN ? volSum/volN : 0;
+    var dayBars = Math.max(1, Math.round(86400000/tfMs)), vol24=0;
+    for (var d=Math.max(0,n-dayBars); d<n; d++) vol24+=closed[d].v;
+    var thin = vol24 < 250000 || flat > 6;
+    var swingLow=Infinity; for (var s=Math.max(0,i-4); s<=i; s++) if(closed[s].l<swingLow) swingLow=closed[s].l;
+    var low3=Infinity; for (var q=Math.max(0,i-2); q<=i; q++) if(closed[q].l<low3) low3=closed[q].l;
+    var rsiMin=Infinity; for (var m=Math.max(0,i-5); m<i; m++) if(r[m]!=null && r[m]<rsiMin) rsiMin=r[m];
+
+    var base = {price:price, rsi:R, trend:trend, ctxTrend:ctxTrend, thin:thin, barTs:bar.t, e21:e21[i], hh20:hh, atr:A};
+    var setup=null, reasons=[], score=0;
+    var isBreak = bar.c>hh && trend!=='down' && R<78 && !thin && volAvg>0 && bar.v>=1.5*volAvg;
+    var isPull = trend==='up' && low3<=e21[i]+0.5*A && bar.c>e21[i] && bar.c>bar.o && bar.c>prev.c && R>=40 && R<=68;
+    var isBounce = rsiMin<30 && r[i-1]!=null && R>r[i-1] && R>30 && bar.c>prev.h && bar.c>bar.o && ctxTrend!=='down';
+    if (isBreak){
+      setup='breakout'; score=62;
+      reasons.push('Closed above the highest price of the previous 20 candles ('+o.fmt(hh)+').');
+      reasons.push('Volume on that candle was '+(bar.v/volAvg).toFixed(1)+'× the recent average, so the move had real buying behind it.');
+    } else if (isPull){
+      setup='pullback'; score=60;
+      reasons.push('Uptrend on the '+o.sigLabel+' chart: price is above its rising 21-candle average ('+o.fmt(e21[i])+').');
+      reasons.push('Price dipped back to that average and the last candle closed higher, a sign buyers stepped back in.');
+      if (R>=45 && R<=60) score+=3;
+      if (volAvg>0 && bar.v>volAvg) score+=4;
+    } else if (isBounce){
+      setup='bounce'; score=45;
+      reasons.push('RSI dropped to '+Math.round(rsiMin)+' (oversold) and has turned back up to '+Math.round(R)+'.');
+      reasons.push('The last candle closed above the previous candle\'s high: an early sign of a turn. This goes against the recent fall, so it carries more risk.');
+    }
+
+    if (!setup){
+      if (trend==='down') return Object.assign(base,{status:'avoid', note:'Downtrend on the '+o.sigLabel+' chart. Price is under its falling averages.'});
+      if (R>75) return Object.assign(base,{status:'watch', note:'Running hot (RSI '+Math.round(R)+'). Buying after a surge is how late money gets caught.'});
+      if (trend==='up'){
+        if (hh>price && (hh-price)/price<0.01) return Object.assign(base,{status:'watch', note:'Uptrend, within 1% of a breakout above '+o.fmt(hh)+'.'});
+        return Object.assign(base,{status:'watch', note:'Uptrend. Waiting for a dip toward '+o.fmt(e21[i])+' before buying.'});
+      }
+      return Object.assign(base,{status:'wait', note:'No clear trend. Nothing to do yet.'});
+    }
+
+    if (setup!=='breakout') reasons.push('RSI is '+Math.round(R)+'.');
+    if (ctxTrend==='up'){ score+=15; reasons.push('Bigger picture ('+o.ctxLabel+'): uptrend.'); }
+    else if (ctxTrend==='down'){ score-=25; reasons.push('Bigger picture ('+o.ctxLabel+'): downtrend.'); }
+    else if (ctxTrend==='side'){ reasons.push('Bigger picture ('+o.ctxLabel+'): sideways.'); }
+    if (!o.isBtc){
+      if (o.btcTrend==='up'){ score+=8; reasons.push('Bitcoin is trending up, and most coins follow it.'); }
+      else if (o.btcTrend==='down'){ score-=12; reasons.push('Bitcoin is trending down, which drags on most coins.'); }
+    }
+    if (thin){ score-=10; reasons.push('Thin trading on this feed. Expect a wider gap between buy and sell prices.'); }
+    score = clamp(Math.round(score),0,100);
+
+    var entry=bar.c;
+    var stop=Math.min(swingLow-0.1*A, entry-1.2*A);
+    stop=Math.max(stop, entry-3*A);
+    var risk=entry-stop, target=entry+2*risk;
+    var stopPct=risk/entry, tgtPct=2*risk/entry, fee=(st.feePct||0)/100;
+    var lossFrac=stopPct+2*fee, gainFrac=tgtPct-2*fee, netRR=gainFrac/lossFrac;
+    var rawStake=st.maxLoss/lossFrac, overRisk=false, stake;
+    if (rawStake < st.minStake){ stake=st.minStake; overRisk=true; }
+    else stake=clamp(Math.floor(rawStake/10)*10, st.minStake, st.maxStake);
+    var plan = Object.assign(base,{setup:setup, score:score, strength: score>=75?'Strong':(score>=60?'Moderate':'Speculative'),
+      entry:entry, stop:stop, target:target, stopPct:stopPct, tgtPct:tgtPct, netRR:netRR,
+      stake:stake, lossGBP:stake*lossFrac, gainGBP:stake*gainFrac, overRisk:overRisk, reasons:reasons});
+
+    if (ctxTrend==='down' && setup!=='bounce') return Object.assign(plan,{status:'watch', note:'A setup appeared, but the bigger trend is down. Skipped.'});
+    if (netRR < 1.2) return Object.assign(plan,{status:'watch', note:'A setup appeared, but after fees the reward is only '+netRR.toFixed(1)+'× the risk. Skipped.'});
+    if (score < 50) return Object.assign(plan,{status:'watch', note:'A weak setup appeared (score '+score+'). Skipped.'});
+    if (price <= stop) return Object.assign(plan,{status:'avoid', note:'A signal fired, then price fell through its stop. Failed.'});
+    if (price > entry+0.6*A) return Object.assign(plan,{status:'watch', note:'A signal fired at '+o.fmt(entry)+' and price has already run. Don\'t chase it.'});
+    return Object.assign(plan,{status:'buy'});
+  }
+
+  // Follow a paper trade through the candles that came after its signal candle.
+  function follow(tr, bars, tfMs, now, maxBars){
+    if (tr.status!=='open' || !bars || !bars.length) return null;
+    var fee=(tr.feePct||0)/100, stopPct=(tr.entry-tr.stop)/tr.entry, tgtPct=(tr.target-tr.entry)/tr.entry;
+    for (var i=0;i<bars.length;i++){
+      var b=bars[i]; if (b.t<=tr.barTs) continue;
+      if (b.l<=tr.stop) return {status:'stopped', closedAt:Math.min(now,b.t+tfMs), exit:tr.stop, frac:-stopPct-2*fee};
+      if (b.h>=tr.target) return {status:'target', closedAt:Math.min(now,b.t+tfMs), exit:tr.target, frac:tgtPct-2*fee};
+    }
+    if ((now-tr.barTs)/tfMs > maxBars){
+      var px=bars[bars.length-1].c;
+      return {status:'expired', closedAt:now, exit:px, frac:(px-tr.entry)/tr.entry-2*fee};
+    }
+    return null;
+  }
+  // Build bigger candles from smaller ones (4-hour from 1-hour, weekly from daily). offset shifts the bucket start (weeks start Monday).
+  function aggregate(bars, ms, offset){
+    var out=[], cur=null, first=true;
+    for (var i=0;i<bars.length;i++){
+      var b=bars[i], start=Math.floor((b.t-offset)/ms)*ms+offset;
+      if (!cur || cur.t!==start){
+        if (cur) out.push(cur);
+        cur={t:start,o:b.o,h:b.h,l:b.l,c:b.c,v:b.v, whole:b.t===start};
+      } else { if(b.h>cur.h) cur.h=b.h; if(b.l<cur.l) cur.l=b.l; cur.c=b.c; cur.v+=b.v; }
+    }
+    if (cur) out.push(cur);
+    if (out.length && !out[0].whole) out.shift();
+    return out;
+  }
+  // Replay the same rules over the history we hold. One trade at a time, fees taken off, no Bitcoin adjustment.
+  function backtest(o){
+    var sig=o.sig, out={n:0,wins:0,losses:0,sum:0,days:0};
+    if (!sig || sig.length<60) return out;
+    var fee=((o.settings.feePct)||0)/100, start=40, k=start;
+    out.days=(sig[sig.length-1].t-sig[start].t)/86400000;
+    while (k < sig.length-1){
+      var now=sig[k].t+o.tfMs+1;
+      var ctx=o.ctx ? o.ctx.filter(function(b){ return b.t+o.ctxMs<=now; }) : null;
+      var r=analyse({sig:sig.slice(0,k+1), ctx:ctx, tfMs:o.tfMs, now:now, settings:o.settings, btcTrend:'unknown', isBtc:true, sigLabel:'', ctxLabel:'', fmt:o.fmt});
+      if (r.status==='buy'){
+        var res=null, j;
+        for (j=k+1;j<sig.length;j++){
+          var b=sig[j];
+          if (b.l<=r.stop){ res=-r.stopPct-2*fee; break; }
+          if (b.h>=r.target){ res=r.tgtPct-2*fee; break; }
+          if (j-k>=o.maxBars){ res=(b.c-r.entry)/r.entry-2*fee; break; }
+        }
+        if (res===null) break;
+        out.n++; out.sum+=res; if (res>0) out.wins++; else out.losses++;
+        k=j+1; continue;
+      }
+      k++;
+    }
+    return out;
+  }
+  return {extract:extract,toCandles:toCandles,ema:ema,rsi:rsi,atr:atr,trendOf:trendOf,analyse:analyse,follow:follow,aggregate:aggregate,backtest:backtest};
+})();
+/*ENGINE-END*/
+
+(function(){
+  var COINS=['BTC','ETH','XRP','SOL','ADA','LINK','UNI','XLM','HBAR','QNT','HYPE','ONDO','ZEC','XMR'];
+  var MODES={
+    short:{label:'Short', sig:'1h', ctx:'4h', sigLabel:'1-hour', ctxLabel:'4-hour chart', hold:'hours to 2 days', maxBars:48},
+    swing:{label:'Swing', sig:'4h', ctx:'1D', sigLabel:'4-hour', ctxLabel:'daily chart', hold:'2 days to 2 weeks', maxBars:84},
+    long:{label:'Long', sig:'1D', ctx:'1W', sigLabel:'daily', ctxLabel:'weekly chart', hold:'2 weeks to 2 months', maxBars:60}
+  };
+  var MODE_KEYS=['short','swing','long'];
+  var TF_MS={'1h':3600e3,'4h':4*3600e3,'1D':86400e3,'1W':7*86400e3};
+  var TTL={'1h':4*60e3,'4h':14*60e3,'1D':55*60e3};
+  var SCAN_EVERY=5*60e3, KEEP=300;
+  var SETUP_NAME={pullback:'Pullback in an uptrend', breakout:'Breakout on strong volume', bounce:'Oversold bounce'};
+  var LS_KEY='trading-desk-app-v1';
+
+  /* Public price feeds, tried in this order for each coin. No keys, no account. */
+  var PROVIDERS=[
+    {id:'binance', name:'Binance', tf:{'1h':'1h','4h':'4h','1D':'1d'},
+      url:function(c,tf){ return 'https://data-api.binance.vision/api/v3/klines?symbol='+c+'USDT&interval='+this.tf[tf]+'&limit='+KEEP; },
+      parse:function(j){ if (!Array.isArray(j)) return null; return j.map(function(k){ return {timestamp:+k[0],open:k[1],high:k[2],low:k[3],close:k[4],volume_usd:k[7]}; }); }},
+    {id:'coinbase', name:'Coinbase', tf:{'1h':3600,'1D':86400},
+      url:function(c,tf){ return 'https://api.exchange.coinbase.com/products/'+c+'-USD/candles?granularity='+this.tf[tf]; },
+      parse:function(j){ if (!Array.isArray(j)) return null; return j.map(function(k){ return {timestamp:k[0]*1000,low:k[1],high:k[2],open:k[3],close:k[4],volume_usd:k[5]*k[4]}; }); }},
+    {id:'kraken', name:'Kraken', tf:{'1h':60,'4h':240,'1D':1440},
+      url:function(c,tf){ return 'https://api.kraken.com/0/public/OHLC?pair='+(c==='BTC'?'XBT':c)+'USD&interval='+this.tf[tf]; },
+      parse:function(j){
+        if (!j || !j.result || (j.error && j.error.length)) return null;
+        var key=Object.keys(j.result).filter(function(k){ return k!=='last'; })[0], rows=j.result[key];
+        if (!Array.isArray(rows)) return null;
+        return rows.map(function(k){ return {timestamp:k[0]*1000,open:k[1],high:k[2],low:k[3],close:k[4],volume_usd:(+k[6])*((+k[5])||(+k[4]))}; });
+      }},
+    {id:'cryptocom', name:'Crypto.com', tf:{'1h':'1h','4h':'4h','1D':'1D'},
+      url:function(c,tf){ return 'https://api.crypto.com/exchange/v1/public/get-candlestick?instrument_name='+c+'_USD&timeframe='+this.tf[tf]+'&count='+KEEP; },
+      parse:function(j){
+        var d=j && j.result && j.result.data; if (!Array.isArray(d)) return null;
+        return d.map(function(k){ return {timestamp:k.t,open:k.o,high:k.h,low:k.l,close:k.c,volume_usd:(+k.v)*(+k.c)}; });
+      }}
+  ];
+  var health={}; PROVIDERS.forEach(function(p){ health[p.id]={ok:0,fail:0,downUntil:0}; });
+
+  var settings={mode:'all', maxLoss:10, minStake:50, maxStake:500, feePct:0.4, sound:false, wake:true, coins:{}};
+  COINS.forEach(function(c){ settings.coins[c]=true; });
+  var journal={trades:[], feed:[]};
+  var source={};
+  var on=false, scanning=false, hasScanned=false, lastScanAt=0, nextScanAt=0, timer=null, progress=null;
+  var results={}, rowInfo={}, btc={h4:'unknown', d1:'unknown'}, pageError=null;
+  var cache=new Map(), btCache={}, actx=null, wake=null, clearArmed=false;
+
+  var $=function(id){return document.getElementById(id);};
+  function el(tag, props){
+    var e=document.createElement(tag);
+    if (props) for (var k in props){
+      if (k==='class') e.className=props[k];
+      else if (k==='text') e.textContent=props[k];
+      else e.setAttribute(k, props[k]);
+    }
+    for (var i=2;i<arguments.length;i++){
+      var c=arguments[i]; if (c==null) continue;
+      e.appendChild(typeof c==='string' ? document.createTextNode(c) : c);
+    }
+    return e;
+  }
+  function clear(node){ while(node.firstChild) node.removeChild(node.firstChild); }
+
+  function fmtPrice(p){
+    if (!isFinite(p)) return '$?';
+    var dp = p>=1000?0 : p>=100?2 : p>=1?3 : p>=0.1?4 : p>=0.01?5 : 6;
+    return '$'+p.toLocaleString('en-GB',{minimumFractionDigits:dp, maximumFractionDigits:dp});
+  }
+  function fmtGBP(x){ var a=Math.abs(x); return (x<0?'−':'')+'£'+(a>=100?Math.round(a).toLocaleString('en-GB'):a.toFixed(2)); }
+  function fmtPct(f){ return (f>=0?'+':'−')+Math.abs(f*100).toFixed(1)+'%'; }
+  function fmtClock(t){ return new Date(t).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
+  function fmtWhen(t){
+    var d=new Date(t), today=new Date();
+    if (d.toDateString()===today.toDateString()) return fmtClock(t);
+    return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' '+fmtClock(t);
+  }
+  function fmtSpan(days){ return days>=60 ? Math.round(days/30)+' months' : days>=3 ? Math.round(days)+' days' : Math.max(1,Math.round(days*24))+' hours'; }
+  function activeModes(){ return settings.mode==='all' ? MODE_KEYS : [settings.mode]; }
+  function activeCoins(){ return COINS.filter(function(c){ return settings.coins[c]!==false; }); }
+
+  /* ---------- storage (this device) ---------- */
+  function applySettings(s){
+    if (!s || typeof s!=='object') return;
+    if (s.mode==='all' || MODES[s.mode]) settings.mode=s.mode;
+    ['maxLoss','minStake','maxStake','feePct'].forEach(function(k){ var v=Number(s[k]); if (isFinite(v) && v>=0) settings[k]=v; });
+    if (settings.maxLoss<=0) settings.maxLoss=10;
+    if (settings.minStake<10) settings.minStake=10;
+    if (settings.maxStake<settings.minStake) settings.maxStake=settings.minStake;
+    settings.sound=!!s.sound; settings.wake=s.wake!==false;
+    if (s.coins && typeof s.coins==='object') COINS.forEach(function(c){ settings.coins[c]=s.coins[c]!==false; });
+  }
+  function validTrade(t){ return t && typeof t.id==='string' && typeof t.coin==='string' && MODES[t.mode] && isFinite(t.entry) && isFinite(t.stop) && isFinite(t.target) && isFinite(t.barTs); }
+  function load(){
+    try{
+      var raw=localStorage.getItem(LS_KEY); if (!raw) return;
+      var b=JSON.parse(raw);
+      applySettings(b.settings);
+      if (Array.isArray(b.trades)) journal.trades=b.trades.filter(validTrade);
+      if (Array.isArray(b.feed)) journal.feed=b.feed.filter(function(f){ return f && isFinite(f.t) && typeof f.text==='string'; });
+      if (b.source && typeof b.source==='object') COINS.forEach(function(c){ if (typeof b.source[c]==='string') source[c]=b.source[c]; });
+    }catch(e){}
+  }
+  function save(){
+    try{ localStorage.setItem(LS_KEY, JSON.stringify({settings:settings, trades:journal.trades.slice(-200), feed:journal.feed.slice(-80), source:source})); }catch(e){}
+  }
+
+  /* ---------- price feeds ---------- */
+  async function getJSON(url){
+    var ctl=new AbortController(), to=setTimeout(function(){ ctl.abort(); }, 12000);
+    try{
+      var r=await fetch(url,{signal:ctl.signal, cache:'no-store'});
+      if (r.status===400 || r.status===404) throw {kind:'notfound'};
+      if (!r.ok) throw {kind:'down'};
+      return await r.json();
+    }catch(e){
+      if (e && e.kind) throw e;
+      throw {kind:'down'};
+    }finally{ clearTimeout(to); }
+  }
+  async function providerCandles(p, coin, tf){
+    if (!p.tf[tf]){
+      if (tf==='4h') return Engine.aggregate(await providerCandles(p, coin, '1h'), TF_MS['4h'], 0);
+      throw {kind:'notfound'};
+    }
+    var key=p.id+'|'+coin+'|'+tf, c=cache.get(key);
+    if (c && Date.now()-c.at < TTL[tf]) return c.bars;
+    var bars=Engine.toCandles(p.parse(await getJSON(p.url(coin, tf))));
+    if (!bars.length) throw {kind:'notfound'};
+    bars=bars.slice(-KEEP);
+    cache.set(key,{at:Date.now(),bars:bars});
+    return bars;
+  }
+  async function fetchCandles(coin, tf){
+    if (tf==='1W') return Engine.aggregate(await fetchCandles(coin,'1D'), TF_MS['1W'], 4*86400e3);
+    var order=PROVIDERS.filter(function(p){ return p.id===source[coin]; }).concat(PROVIDERS.filter(function(p){ return p.id!==source[coin]; }));
+    var sawDown=false, tried=0;
+    for (var i=0;i<order.length;i++){
+      var p=order[i], hl=health[p.id];
+      if (hl.downUntil > Date.now()){ sawDown=true; continue; }
+      tried++;
+      try{
+        var bars=await providerCandles(p, coin, tf);
+        hl.ok++; hl.fail=0; source[coin]=p.id;
+        return bars;
+      }catch(e){
+        if (!(e && e.kind==='notfound')){
+          sawDown=true; hl.fail++;
+          if (hl.fail>=2) hl.downUntil=Date.now()+(hl.ok?2:10)*60e3;
+        }
+      }
+    }
+    throw {kind: sawDown ? 'down' : 'notfound'};
+  }
+  async function tryCandles(coin, tf){
+    try{ return {bars:await fetchCandles(coin, tf)}; }
+    catch(e){ return {bars:null, err:(e && e.kind)||'down'}; }
+  }
+
+  async function scanCoin(coin){
+    var modes=activeModes(), need={};
+    modes.forEach(function(m){ need[MODES[m].sig]=1; need[MODES[m].ctx]=1; });
+    var got={}, order=['1h','4h','1D','1W'];
+    for (var i=0;i<order.length;i++){ if (need[order[i]]) got[order[i]]=await tryCandles(coin, order[i]); }
+    var now=Date.now();
+    results[coin]=results[coin]||{};
+    var info=(got['1h']&&got['1h'].bars) ? {bars:got['1h'].bars, back:24} : (got['4h']&&got['4h'].bars) ? {bars:got['4h'].bars, back:6} : (got['1D']&&got['1D'].bars) ? {bars:got['1D'].bars, back:1} : null;
+    if (info){
+      var last=info.bars[info.bars.length-1], ref=info.bars[Math.max(0, info.bars.length-1-info.back)];
+      rowInfo[coin]={price:last.c, chg:(last.c-ref.c)/ref.c};
+    }
+    modes.forEach(function(m){
+      var M=MODES[m], sig=got[M.sig], ctx=got[M.ctx];
+      if (!sig || !sig.bars){
+        results[coin][m]={status:'nodata', note: sig && sig.err==='notfound' ? 'None of the price feeds list '+coin+' against the dollar.' : 'Couldn\'t load prices this time. The desk will try again on the next scan.'};
+        return;
+      }
+      var opts={sig:sig.bars, ctx:ctx&&ctx.bars, tfMs:TF_MS[M.sig], ctxMs:TF_MS[M.ctx], now:now, settings:settings,
+        btcTrend:btc.h4, isBtc:coin==='BTC', sigLabel:M.sigLabel, ctxLabel:M.ctxLabel, fmt:fmtPrice, maxBars:M.maxBars};
+      var res=Engine.analyse(opts);
+      var bk=coin+'|'+m, btKey=sig.bars[sig.bars.length-1].t+'|'+sig.bars.length+'|'+settings.feePct;
+      if (!btCache[bk] || btCache[bk].key!==btKey) btCache[bk]={key:btKey, res:Engine.backtest(opts)};
+      res.bt=btCache[bk].res;
+      if (res.status==='buy' && res.bt.n>=4 && res.bt.sum<0){
+        res.score=Math.max(0, res.score-12);
+        res.strength = res.score>=75?'Strong':(res.score>=60?'Moderate':'Speculative');
+        res.reasons.push('Marked down: these rules have lost money on '+coin+' over the past '+fmtSpan(res.bt.days)+' ('+res.bt.wins+' of '+res.bt.n+' trades won).');
+        if (res.score<50){ res.status='watch'; res.note='A setup appeared, but these rules have a losing record on '+coin+'. Skipped.'; }
+      }
+      results[coin][m]=res;
+      followTrades(coin, m, sig.bars, now);
+      if (res.status==='buy') openTrade(coin, m, res, now);
+    });
+  }
+  function openTrade(coin, m, res, now){
+    var id=coin+'-'+m+'-'+res.barTs;
+    var exists=journal.trades.some(function(t){ return t.id===id || (t.coin===coin && t.mode===m && t.status==='open'); });
+    if (exists) return;
+    journal.trades.push({id:id, coin:coin, mode:m, setup:res.setup, score:res.score, entry:res.entry, stop:res.stop, target:res.target,
+      stake:res.stake, feePct:settings.feePct, barTs:res.barTs, openedAt:now, status:'open'});
+    addFeed('buy', coin+' · '+MODES[m].label+' · '+SETUP_NAME[res.setup]+'. Entry '+fmtPrice(res.entry)+', stop '+fmtPrice(res.stop)+', target '+fmtPrice(res.target)+'. Stake '+fmtGBP(res.stake)+'.', now);
+    beep();
+  }
+  function followTrades(coin, m, bars, now){
+    journal.trades.forEach(function(t){
+      if (t.coin!==coin || t.mode!==m || t.status!=='open') return;
+      var out=Engine.follow(t, bars, TF_MS[MODES[m].sig], now, MODES[m].maxBars);
+      if (!out) return;
+      t.status=out.status; t.closedAt=out.closedAt; t.exit=out.exit; t.frac=out.frac; t.gbp=t.stake*out.frac;
+      var word = out.status==='target' ? 'hit its target' : out.status==='stopped' ? 'was stopped out' : 'ran out of time and was closed';
+      addFeed(t.gbp>=0?'win':'loss', coin+' ('+MODES[m].label.toLowerCase()+') '+word+': '+fmtGBP(t.gbp)+' on paper ('+fmtPct(out.frac)+' after fees).', now);
+    });
+  }
+  function addFeed(kind, text, t){ journal.feed.push({t:t||Date.now(), kind:kind, text:text}); if (journal.feed.length>80) journal.feed=journal.feed.slice(-80); }
+
+  async function scan(){
+    if (scanning || !on) return;
+    scanning=true; pageError=null; clearTimeout(timer);
+    var coins=activeCoins();
+    progress={done:0,total:coins.length}; renderStatus(); renderError();
+    try{
+      var b4=await tryCandles('BTC','4h'), b1=await tryCandles('BTC','1D');
+      btc.h4 = b4.bars ? Engine.trendOf(b4.bars) : 'unknown';
+      btc.d1 = b1.bars ? Engine.trendOf(b1.bars) : 'unknown';
+      var queue=coins.slice();
+      async function worker(){
+        while (queue.length && on){
+          var c=queue.shift();
+          try{ await scanCoin(c); }
+          catch(e){ results[c]={}; MODE_KEYS.forEach(function(m){ results[c][m]={status:'nodata',note:'Something went wrong reading this coin. The desk will try again on the next scan.'}; }); }
+          progress.done++; renderStatus(); renderSignals(); renderCoins();
+        }
+      }
+      await Promise.all([worker(),worker(),worker()]);
+      var gotAny=coins.some(function(c){ return activeModes().some(function(m){ var r=results[c]&&results[c][m]; return r && r.status!=='nodata'; }); });
+      if (gotAny || !coins.length){ hasScanned=true; lastScanAt=Date.now(); }
+      else pageError = navigator.onLine===false ? 'offline' : 'nofeed';
+    }catch(e){ pageError='nofeed'; }
+    scanning=false; progress=null;
+    save();
+    if (on){ nextScanAt=Date.now()+SCAN_EVERY; timer=setTimeout(scan, SCAN_EVERY); }
+    renderAll();
+  }
+
+  /* ---------- sound and screen ---------- */
+  function armSound(){ try{ var AC=window.AudioContext||window.webkitAudioContext; if (!AC) return; actx=actx||new AC(); if (actx.resume) actx.resume().catch(function(){}); }catch(e){} }
+  function beep(){
+    if (!settings.sound || !actx) return;
+    try{
+      var o=actx.createOscillator(), g=actx.createGain(), t=actx.currentTime;
+      o.frequency.value=880; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.2,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+0.4);
+      o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t+0.45);
+    }catch(e){}
+  }
+  async function holdWake(){
+    try{
+      if (!settings.wake || !on || wake || !('wakeLock' in navigator)) return;
+      wake=await navigator.wakeLock.request('screen');
+      wake.addEventListener('release', function(){ wake=null; });
+    }catch(e){ wake=null; }
+  }
+  function dropWake(){ try{ if (wake) wake.release(); }catch(e){} wake=null; }
+
+  /* ---------- render ---------- */
+  function sourcesText(){
+    var n={}; activeCoins().forEach(function(c){ if (source[c] && rowInfo[c]) n[source[c]]=(n[source[c]]||0)+1; });
+    var parts=PROVIDERS.filter(function(p){ return n[p.id]; }).map(function(p){ return p.name+' ('+n[p.id]+')'; });
+    return parts.length ? 'Prices from '+parts.join(', ')+'.' : '';
+  }
+  function renderStatus(){
+    $('power').setAttribute('aria-checked', on?'true':'false');
+    var ps=$('powerState'), sl=$('statusLine');
+    if (!on){
+      ps.textContent='Desk is off';
+      sl.textContent = hasScanned ? 'Last scan '+fmtClock(lastScanAt)+'. Results below are frozen until you turn it back on.' : 'Turn it on to scan your coins. It rescans every 5 minutes until you turn it off.';
+      return;
+    }
+    if (scanning){
+      ps.textContent='Scanning…';
+      sl.textContent = progress ? 'Checked '+progress.done+' of '+progress.total+' coins.' : 'Starting up.';
+      return;
+    }
+    ps.textContent='Desk is on';
+    var left=Math.max(0, Math.round((nextScanAt-Date.now())/1000)), mm=Math.floor(left/60), ss=('0'+(left%60)).slice(-2);
+    sl.textContent=(lastScanAt ? 'Last scan '+fmtClock(lastScanAt)+'. Next in ' : 'No scan has finished yet. Next try in ')+mm+':'+ss+'. '+sourcesText();
+  }
+  function renderError(){
+    var box=$('pageError'); clear(box);
+    if (!pageError){ box.hidden=true; return; }
+    box.hidden=false;
+    var msg = pageError==='offline' ? 'You\'re offline, so no prices could be loaded. The desk will try again when the next scan is due.'
+      : 'None of the four price feeds answered (Binance, Coinbase, Kraken, Crypto.com). Check your connection, or try another network: some Wi-Fi and content blockers stop these requests. The desk will keep trying.';
+    box.appendChild(el('div',{class:'banner bad', role:'status', text:msg}));
+  }
+  function trendWord(t){ return t==='up'?'rising' : t==='down'?'falling' : t==='side'?'moving sideways' : 'unclear'; }
+  function renderBackdrop(){
+    var box=$('backdrop'); clear(box);
+    if (!hasScanned){ box.hidden=true; return; }
+    box.hidden=false;
+    var cls = btc.h4==='down'||btc.d1==='down' ? 'down' : (btc.h4==='up' ? 'up' : '');
+    var advice = btc.h4==='down' ? 'Most coins follow Bitcoin down, so buy signals are marked lower while this lasts.'
+      : btc.h4==='up' ? 'A rising Bitcoin lifts most coins, so buy signals score a little higher.'
+      : 'No help or drag from Bitcoin right now.';
+    box.appendChild(el('div',{class:'banner backdrop '+cls},
+      el('b',{text:'Market backdrop. '}),
+      'Bitcoin is '+trendWord(btc.h4)+' on the 4-hour chart and '+trendWord(btc.d1)+' on the daily chart. '+advice));
+  }
+  function levelBox(cls, k, v, p){ return el('div',{class:'level '+cls}, el('div',{class:'k',text:k}), el('div',{class:'v',text:v}), p?el('div',{class:'p',text:p}):null); }
+  function pastLine(coin, bt){
+    if (!bt) return null;
+    if (!bt.n) return el('p',{class:'past muted',text:'Past '+fmtSpan(bt.days)+' on '+coin+': these rules gave no completed trades, so there is no track record to lean on.'});
+    return el('p',{class:'past'}, 'Past '+fmtSpan(bt.days)+' on '+coin+': '+bt.n+' trade'+(bt.n===1?'':'s')+' by these rules, '+bt.wins+' won. Net ',
+      el('b',{class:bt.sum>=0?'pos':'neg',text:fmtPct(bt.sum)}), ' after fees.');
+  }
+  function ticket(coin, m, r, example){
+    var M=MODES[m];
+    var t=el('article',{class:'ticket'+(example?' example':'')});
+    t.appendChild(el('div',{class:'ticket-top'},
+      el('div',null, el('div',{class:'ticket-coin',text:coin}), el('div',{class:'ticket-sub',text:SETUP_NAME[r.setup]+' · '+M.label.toLowerCase()+' trade, '+M.hold})),
+      el('div',null, example ? el('span',{class:'pill wait',text:'Example, not live'}) : el('span',{class:'pill buy',text:'Buy · '+r.strength+' '+r.score}))));
+    t.appendChild(el('div',{class:'levels'},
+      levelBox('entry','Buy near', fmtPrice(r.entry), 'now '+fmtPrice(r.price)),
+      levelBox('stop','Stop', fmtPrice(r.stop), fmtPct(-r.stopPct)),
+      levelBox('target','Target', fmtPrice(r.target), fmtPct(r.tgtPct))));
+    t.appendChild(el('p',{class:'money'}, 'Stake ', el('b',{text:fmtGBP(r.stake)}), '. Stopped out costs ', el('b',{class:'neg',text:fmtGBP(r.lossGBP)}), '. Target makes ', el('b',{class:'pos',text:fmtGBP(r.gainGBP)}), ' after fees.'));
+    if (r.overRisk) t.appendChild(el('p',{class:'small neg',text:'The stop is wide, so even your smallest stake risks more than your '+fmtGBP(settings.maxLoss)+' limit.'}));
+    var ul=el('ul',{class:'why'}); (r.reasons||[]).forEach(function(x){ ul.appendChild(el('li',{text:x})); }); t.appendChild(ul);
+    if (!example){
+      var pl=pastLine(coin, r.bt); if (pl) t.appendChild(pl);
+      t.appendChild(el('p',{class:'muted small',text:'Signal candle closed '+fmtWhen(r.barTs+TF_MS[M.sig])+'. Logged in your paper record.'}));
+    }
+    return t;
+  }
+  function renderSignals(){
+    var box=$('tickets'); clear(box);
+    var list=[];
+    activeCoins().forEach(function(c){ activeModes().forEach(function(m){ var r=results[c]&&results[c][m]; if (r && r.status==='buy') list.push({c:c,m:m,r:r}); }); });
+    list.sort(function(a,b){ return b.r.score-a.r.score; });
+    $('sigMeta').textContent = hasScanned ? list.length+' live' : '';
+    if (list.length){ list.forEach(function(x){ box.appendChild(ticket(x.c,x.m,x.r,false)); }); return; }
+    if (hasScanned || scanning){
+      box.appendChild(el('div',{class:'empty',text: scanning && !hasScanned ? 'Scanning. Signals appear here as each coin is checked.' : 'No buy setups on the latest closed candles. Most scans end this way, and holding cash is a fine result. The desk keeps checking.'}));
+      return;
+    }
+    box.appendChild(ticket('ABC','short',{setup:'pullback',score:78,strength:'Strong',entry:2.5,price:2.508,stop:2.44,target:2.62,stopPct:0.024,tgtPct:0.048,stake:310,lossGBP:9.92,gainGBP:12.4,
+      reasons:['Uptrend on the 1-hour chart: price is above its rising 21-candle average.','Price dipped back to that average and the last candle closed higher.','Bigger picture (4-hour chart): uptrend.']},true));
+  }
+  function renderCoins(){
+    var box=$('coins'); clear(box);
+    var rank={buy:0,watch:1,wait:2,avoid:3,nodata:4};
+    var coins=activeCoins().slice().sort(function(a,b){
+      function best(c){ var s=9; activeModes().forEach(function(m){ var r=results[c]&&results[c][m]; if (r && rank[r.status]<s) s=rank[r.status]; }); return s; }
+      return best(a)-best(b) || COINS.indexOf(a)-COINS.indexOf(b);
+    });
+    if (!coins.length){ box.appendChild(el('div',{class:'coin muted',text:'No coins selected. Pick some under "Coins, fees, sound and screen".'})); return; }
+    coins.forEach(function(c){
+      var info=rowInfo[c], row=el('div',{class:'coin'});
+      var top=el('div',{class:'coin-top'}, el('span',{class:'coin-name',text:c}), el('span',{class:'coin-price',text: info?fmtPrice(info.price):'—'}));
+      if (info) top.appendChild(el('span',{class:'chg '+(info.chg>=0?'up':'down'),text:fmtPct(info.chg)+' 24h'}));
+      row.appendChild(top);
+      activeModes().forEach(function(m){
+        var r=results[c]&&results[c][m];
+        var status=r?r.status:'nodata';
+        var label={buy:'Buy',watch:'Watch',wait:'Wait',avoid:'Avoid',nodata:r?'No data':'Not scanned'}[status];
+        var note = r ? (r.status==='buy' ? SETUP_NAME[r.setup]+'. See the signal above.' : (r.note||'')) : '';
+        row.appendChild(el('div',{class:'coin-line'}, el('span',{class:'mode',text:MODES[m].label}), el('span',{class:'pill '+status,text:label}), el('span',{class:'note',text:note})));
+      });
+      box.appendChild(row);
+    });
+  }
+  function renderBacktest(){
+    var box=$('bt'); clear(box);
+    if (!hasScanned){ box.appendChild(el('div',{class:'empty',text:'Turn the desk on once and this fills in with how each trade type would have done on your coins.'})); return; }
+    var t=el('div',{class:'bt'});
+    t.appendChild(el('div',{class:'bt-row'}, el('span',{text:'Type'}), el('span',{text:'History'}), el('span',{text:'Trades'}), el('span',{text:'Won'}), el('span',{text:'Avg'})));
+    activeModes().forEach(function(m){
+      var n=0,w=0,sum=0,days=0;
+      activeCoins().forEach(function(c){ var r=results[c]&&results[c][m]; if (r && r.bt){ n+=r.bt.n; w+=r.bt.wins; sum+=r.bt.sum; if (r.bt.days>days) days=r.bt.days; } });
+      var avg=n?sum/n:0;
+      t.appendChild(el('div',{class:'bt-row'}, el('span',{text:MODES[m].label}), el('span',{text:days?fmtSpan(days):'—'}), el('span',{class:'num',text:String(n)}),
+        el('span',{class:'num',text:n?Math.round(w/n*100)+'%':'—'}), el('span',{class:'num '+(n?(avg>=0?'pos':'neg'):''),text:n?fmtPct(avg):'—'})));
+    });
+    box.appendChild(t);
+  }
+  function renderFeed(){
+    var box=$('feed'); clear(box);
+    if (!journal.feed.length){ box.appendChild(el('div',{class:'empty',text:'Each new buy signal and each paper-trade result is listed here as it happens, newest first.'})); return; }
+    var list=el('div',{class:'feed'});
+    journal.feed.slice().reverse().slice(0,30).forEach(function(f){
+      var pill = f.kind==='buy'?el('span',{class:'pill buy',text:'Buy'}) : f.kind==='win'?el('span',{class:'pill win',text:'Won'}) : f.kind==='loss'?el('span',{class:'pill loss',text:'Lost'}) : null;
+      var body=el('div',null); if (pill){ body.appendChild(pill); body.appendChild(document.createTextNode(' ')); }
+      body.appendChild(document.createTextNode(f.text));
+      list.appendChild(el('div',{class:'feed-item'}, el('time',{text:fmtWhen(f.t)}), body));
+    });
+    box.appendChild(list);
+  }
+  function renderRecord(){
+    var closed=journal.trades.filter(function(t){return t.status!=='open';}), open=journal.trades.filter(function(t){return t.status==='open';});
+    var wins=closed.filter(function(t){return t.gbp>0;}).length, net=closed.reduce(function(s,t){return s+(t.gbp||0);},0);
+    var sc=$('score'); clear(sc);
+    [['Open',String(open.length),''],['Closed',String(closed.length),''],['Won',closed.length?wins+' of '+closed.length:'—',''],['Net on paper',closed.length?fmtGBP(net):'—',net>0?'pos':net<0?'neg':'']].forEach(function(x){
+      sc.appendChild(el('div',null, el('div',{class:'k',text:x[0]}), el('div',{class:'v '+x[2],text:x[1]})));
+    });
+    var box=$('trades'); clear(box);
+    if (!journal.trades.length){ box.appendChild(el('div',{class:'empty',text:'No paper trades yet. The first buy signal starts the record.'})); return; }
+    var list=el('div',{class:'feed'});
+    journal.trades.slice().reverse().slice(0,40).forEach(function(t){
+      var M=MODES[t.mode], body=el('div',null), pill;
+      if (t.status==='open') pill=el('span',{class:'pill watch',text:'Open'});
+      else pill=el('span',{class:'pill '+(t.gbp>0?'win':'loss'),text: t.status==='target'?'Target':t.status==='stopped'?'Stopped':'Timed out'});
+      body.appendChild(pill);
+      body.appendChild(document.createTextNode(' '+t.coin+' · '+M.label.toLowerCase()+' · in '+fmtPrice(t.entry)+', stop '+fmtPrice(t.stop)+', target '+fmtPrice(t.target)+' · '+fmtGBP(t.stake)));
+      if (t.status!=='open'){ body.appendChild(document.createTextNode(' · ')); body.appendChild(el('b',{class:t.gbp>0?'pos':'neg',text:fmtGBP(t.gbp)})); }
+      list.appendChild(el('div',{class:'feed-item'}, el('time',{text:fmtWhen(t.openedAt)}), body));
+    });
+    box.appendChild(list);
+  }
+  function renderControls(){
+    ['short','swing','long','all'].forEach(function(m){ $('mode-'+m).setAttribute('aria-pressed', settings.mode===m?'true':'false'); });
+    $('modeHelp').textContent = settings.mode==='short' ? 'Short: trades meant to last hours to 2 days, read from 1-hour candles.'
+      : settings.mode==='swing' ? 'Swing: 2 days to 2 weeks, read from 4-hour candles.'
+      : settings.mode==='long' ? 'Long: 2 weeks to 2 months, read from daily candles.'
+      : 'Short lasts hours to 2 days, Swing 2 days to 2 weeks, Long 2 weeks to 2 months.';
+    var sel=$('maxLoss'); if (![].some.call(sel.options,function(o){return Number(o.value)===settings.maxLoss;})) sel.appendChild(el('option',{value:String(settings.maxLoss),text:'£'+settings.maxLoss}));
+    sel.value=String(settings.maxLoss);
+    $('minStake').value=settings.minStake; $('maxStake').value=settings.maxStake; $('feePct').value=settings.feePct;
+    $('sound').checked=!!settings.sound; $('wake').checked=!!settings.wake;
+    COINS.forEach(function(c){ var b=$('coin-'+c); if (b) b.setAttribute('aria-pressed', settings.coins[c]!==false?'true':'false'); });
+    $('feedInfo').textContent=sourcesText();
+  }
+  function renderAll(){ renderStatus(); renderError(); renderControls(); renderBackdrop(); renderSignals(); renderCoins(); renderBacktest(); renderFeed(); renderRecord(); }
+
+  /* ---------- events ---------- */
+  function settingsChanged(rescan){
+    save(); renderControls(); renderSignals(); renderCoins(); renderBacktest();
+    if (rescan && on && !scanning){ clearTimeout(timer); scan(); }
+  }
+  COINS.forEach(function(c){
+    var b=el('button',{type:'button',class:'chip-btn',id:'coin-'+c,'aria-pressed':'true',text:c});
+    b.addEventListener('click', function(){ settings.coins[c]=!(settings.coins[c]!==false); settingsChanged(settings.coins[c]); });
+    $('coinChips').appendChild(b);
+  });
+  $('power').addEventListener('click', function(){
+    on=!on;
+    if (on){ pageError=null; if (settings.sound) armSound(); holdWake(); renderAll(); scan(); }
+    else { clearTimeout(timer); dropWake(); renderAll(); }
+  });
+  ['short','swing','long','all'].forEach(function(m){ $('mode-'+m).addEventListener('click', function(){ settings.mode=m; settingsChanged(true); }); });
+  $('maxLoss').addEventListener('change', function(){ settings.maxLoss=Number(this.value)||10; settingsChanged(true); });
+  function numField(id, key, lo, hi){
+    $(id).addEventListener('change', function(){
+      var v=Number(this.value); if (!isFinite(v)) v=settings[key];
+      settings[key]=Math.max(lo, Math.min(hi, v));
+      if (settings.maxStake<settings.minStake){ if (key==='minStake') settings.maxStake=settings.minStake; else settings.minStake=settings.maxStake; }
+      settingsChanged(true);
+    });
+  }
+  numField('minStake','minStake',10,5000); numField('maxStake','maxStake',10,5000); numField('feePct','feePct',0,3);
+  $('sound').addEventListener('change', function(){ settings.sound=this.checked; if (this.checked){ armSound(); beep(); } settingsChanged(false); });
+  $('wake').addEventListener('change', function(){ settings.wake=this.checked; if (this.checked) holdWake(); else dropWake(); settingsChanged(false); });
+  $('clearRec').addEventListener('click', function(){
+    var b=this;
+    if (!clearArmed){ clearArmed=true; b.textContent='Tap again to delete every paper trade'; setTimeout(function(){ clearArmed=false; b.textContent='Clear paper record'; }, 5000); return; }
+    clearArmed=false; b.textContent='Clear paper record';
+    journal.trades=[]; journal.feed=[]; save(); renderFeed(); renderRecord();
+  });
+  setInterval(function(){ if (on && !scanning) renderStatus(); }, 1000);
+  document.addEventListener('visibilitychange', function(){
+    if (document.hidden) return;
+    if (on) holdWake();
+    if (on && !scanning && Date.now()>=nextScanAt){ clearTimeout(timer); scan(); }
+  });
+
+  load(); renderAll();
+})();
+</script>
+</body>
+</html>
