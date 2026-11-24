@@ -1,0 +1,60 @@
+# Trading Desk background scanner.
+# Runs the desk's rules on a schedule and saves the record (signals, paper trades, history)
+# to the desk-data branch, where the app reads it. Pause it from the Actions tab.
+name: Trading Desk background scan
+
+on:
+  schedule:
+    - cron: '3-59/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desk-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Load the saved record
+        run: |
+          set -e
+          mkdir -p "$RUNNER_TEMP/desk"
+          code=0
+          git ls-remote --exit-code --heads origin desk-data >/dev/null || code=$?
+          if [ "$code" = "0" ]; then
+            git fetch --depth 1 origin desk-data
+            git show FETCH_HEAD:desk-data.json > "$RUNNER_TEMP/desk/desk-data.json"
+            echo "Loaded the saved record."
+          elif [ "$code" = "2" ]; then
+            echo "No saved record yet. Starting a new one."
+          else
+            echo "Could not reach the repository to load the record." >&2
+            exit 1
+          fi
+
+      - name: Scan
+        run: node desk-scan.js "$RUNNER_TEMP/desk/desk-data.json"
+
+      - name: Save the record
+        if: always()
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          cd "$RUNNER_TEMP/desk"
+          if [ ! -s desk-data.json ]; then echo "Nothing to save."; exit 0; fi
+          git init -q -b desk-data
+          git config user.name "trading-desk-bot"
+          git config user.email "trading-desk-bot@users.noreply.github.com"
+          git add desk-data.json
+          git commit -q -m "Desk scan $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" desk-data
+          echo "Saved."

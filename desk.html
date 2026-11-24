@@ -164,11 +164,13 @@ details>.inner{padding:0 0 16px;display:flex;flex-direction:column;gap:14px}
 
   <div class="power">
     <div class="power-text">
-      <div class="power-state" id="powerState">Desk is off</div>
-      <div class="muted small" id="statusLine">Turn it on to scan your coins. It rescans every 5 minutes until you turn it off.</div>
+      <div class="power-state" id="powerState">Live scan is off</div>
+      <div class="muted small" id="statusLine">Turn it on to scan your coins every 5 minutes while the app is open.</div>
     </div>
-    <button class="switch" id="power" role="switch" aria-checked="false" aria-label="Turn the trading desk on or off"></button>
+    <button class="switch" id="power" role="switch" aria-checked="false" aria-label="Turn live scanning on or off"></button>
   </div>
+
+  <div id="bg"><div class="banner">Checking the background desk…</div></div>
 
   <div id="pageError" hidden></div>
 
@@ -213,7 +215,8 @@ details>.inner{padding:0 0 16px;display:flex;flex-direction:column;gap:14px}
           <span class="muted small">Check your exchange. Fees are taken off every profit figure below.</span>
         </div>
         <label class="check" for="sound"><input type="checkbox" id="sound"> Beep when a new buy signal appears</label>
-        <label class="check" for="wake"><input type="checkbox" id="wake"> Keep the screen awake while the desk is on</label>
+        <label class="check" for="wake"><input type="checkbox" id="wake"> Keep the screen awake while the live scan is on</label>
+        <p class="muted small" id="bgSettings"></p>
       </div>
     </details>
   </div>
@@ -242,11 +245,11 @@ details>.inner{padding:0 0 16px;display:flex;flex-direction:column;gap:14px}
   </section>
 
   <section aria-labelledby="recH">
-    <div class="sec-head"><h2 id="recH">Paper record</h2><span class="muted small">Saved on this device</span></div>
+    <div class="sec-head"><h2 id="recH">Paper record</h2><span class="muted small" id="recMeta"></span></div>
     <p class="muted small">Every buy signal is logged as a pretend trade and followed to its stop or target. No real money moves.</p>
     <div class="score" id="score"></div>
     <div id="trades"></div>
-    <div><button type="button" class="btn danger" id="clearRec">Clear paper record</button></div>
+    <div id="clearWrap"><button type="button" class="btn danger" id="clearRec">Clear paper record</button></div>
   </section>
 
   <details>
@@ -261,13 +264,14 @@ details>.inner{padding:0 0 16px;display:flex;flex-direction:column;gap:14px}
         <li><b>Filters.</b> Signals are marked down or skipped when the bigger trend is down, Bitcoin is falling, trading is thin, fees would eat the profit, or the rules have a losing record on that coin.</li>
       </ul>
       <p><b>Short</b> reads 1-hour candles with the 4-hour trend as backdrop. <b>Swing</b> reads 4-hour candles with the daily trend. <b>Long</b> reads daily candles with the weekly trend.</p>
-      <p><b>Limits.</b> The desk only scans while this app is open on screen. It buys only: no shorting. It never places trades. Prices come from public exchange feeds and can differ slightly from the price where you trade. No rule set wins every time, so treat the output as information, not personal financial advice, and never stake money you can't afford to lose.</p>
+      <p><b>Limits.</b> A copy of the desk runs on GitHub about every 10 minutes and keeps the record, so it carries on while this app is closed. GitHub can run those jobs late, so a background signal may reach you some minutes after the candle closes. It buys only: no shorting. It never places trades. Prices come from public exchange feeds and can differ slightly from the price where you trade. No rule set wins every time, so treat the output as information, not personal financial advice, and never stake money you can't afford to lose.</p>
       <p class="muted small" id="feedInfo"></p>
     </div>
   </details>
 </div>
 
 <script>
+/*SHARED-START*/
 /*ENGINE-START*/
 var Engine = (function(){
   function extract(result){
@@ -519,21 +523,11 @@ var Engine = (function(){
 })();
 /*ENGINE-END*/
 
-(function(){
-  var COINS=['BTC','ETH','XRP','SOL','ADA','LINK','UNI','XLM','HBAR','QNT','HYPE','ONDO','ZEC','XMR'];
-  var MODES={
-    short:{label:'Short', sig:'1h', ctx:'4h', sigLabel:'1-hour', ctxLabel:'4-hour chart', hold:'hours to 2 days', maxBars:48},
-    swing:{label:'Swing', sig:'4h', ctx:'1D', sigLabel:'4-hour', ctxLabel:'daily chart', hold:'2 days to 2 weeks', maxBars:84},
-    long:{label:'Long', sig:'1D', ctx:'1W', sigLabel:'daily', ctxLabel:'weekly chart', hold:'2 weeks to 2 months', maxBars:60}
-  };
-  var MODE_KEYS=['short','swing','long'];
+/* Public price feeds, tried in order for each coin. No keys, no account. Works in a browser and in Node. */
+var Feeds = (function(){
+  var KEEP=300;
   var TF_MS={'1h':3600e3,'4h':4*3600e3,'1D':86400e3,'1W':7*86400e3};
   var TTL={'1h':4*60e3,'4h':14*60e3,'1D':55*60e3};
-  var SCAN_EVERY=5*60e3, KEEP=300;
-  var SETUP_NAME={pullback:'Pullback in an uptrend', breakout:'Breakout on strong volume', bounce:'Oversold bounce'};
-  var LS_KEY='trading-desk-app-v1';
-
-  /* Public price feeds, tried in this order for each coin. No keys, no account. */
   var PROVIDERS=[
     {id:'binance', name:'Binance', tf:{'1h':'1h','4h':'4h','1D':'1d'},
       url:function(c,tf){ return 'https://data-api.binance.vision/api/v3/klines?symbol='+c+'USDT&interval='+this.tf[tf]+'&limit='+KEEP; },
@@ -556,82 +550,15 @@ var Engine = (function(){
         return d.map(function(k){ return {timestamp:k.t,open:k.o,high:k.h,low:k.l,close:k.c,volume_usd:(+k.v)*(+k.c)}; });
       }}
   ];
-  var health={}; PROVIDERS.forEach(function(p){ health[p.id]={ok:0,fail:0,downUntil:0}; });
+  var health={}, cache=new Map(), source={};
+  PROVIDERS.forEach(function(p){ health[p.id]={ok:0,fail:0,missing:0,downUntil:0}; });
 
-  var settings={mode:'all', maxLoss:10, minStake:50, maxStake:500, feePct:0.4, sound:false, wake:true, coins:{}};
-  COINS.forEach(function(c){ settings.coins[c]=true; });
-  var journal={trades:[], feed:[]};
-  var source={};
-  var on=false, scanning=false, hasScanned=false, lastScanAt=0, nextScanAt=0, timer=null, progress=null;
-  var results={}, rowInfo={}, btc={h4:'unknown', d1:'unknown'}, pageError=null;
-  var cache=new Map(), btCache={}, actx=null, wake=null, clearArmed=false;
-
-  var $=function(id){return document.getElementById(id);};
-  function el(tag, props){
-    var e=document.createElement(tag);
-    if (props) for (var k in props){
-      if (k==='class') e.className=props[k];
-      else if (k==='text') e.textContent=props[k];
-      else e.setAttribute(k, props[k]);
-    }
-    for (var i=2;i<arguments.length;i++){
-      var c=arguments[i]; if (c==null) continue;
-      e.appendChild(typeof c==='string' ? document.createTextNode(c) : c);
-    }
-    return e;
-  }
-  function clear(node){ while(node.firstChild) node.removeChild(node.firstChild); }
-
-  function fmtPrice(p){
-    if (!isFinite(p)) return '$?';
-    var dp = p>=1000?0 : p>=100?2 : p>=1?3 : p>=0.1?4 : p>=0.01?5 : 6;
-    return '$'+p.toLocaleString('en-GB',{minimumFractionDigits:dp, maximumFractionDigits:dp});
-  }
-  function fmtGBP(x){ var a=Math.abs(x); return (x<0?'−':'')+'£'+(a>=100?Math.round(a).toLocaleString('en-GB'):a.toFixed(2)); }
-  function fmtPct(f){ return (f>=0?'+':'−')+Math.abs(f*100).toFixed(1)+'%'; }
-  function fmtClock(t){ return new Date(t).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
-  function fmtWhen(t){
-    var d=new Date(t), today=new Date();
-    if (d.toDateString()===today.toDateString()) return fmtClock(t);
-    return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' '+fmtClock(t);
-  }
-  function fmtSpan(days){ return days>=60 ? Math.round(days/30)+' months' : days>=3 ? Math.round(days)+' days' : Math.max(1,Math.round(days*24))+' hours'; }
-  function activeModes(){ return settings.mode==='all' ? MODE_KEYS : [settings.mode]; }
-  function activeCoins(){ return COINS.filter(function(c){ return settings.coins[c]!==false; }); }
-
-  /* ---------- storage (this device) ---------- */
-  function applySettings(s){
-    if (!s || typeof s!=='object') return;
-    if (s.mode==='all' || MODES[s.mode]) settings.mode=s.mode;
-    ['maxLoss','minStake','maxStake','feePct'].forEach(function(k){ var v=Number(s[k]); if (isFinite(v) && v>=0) settings[k]=v; });
-    if (settings.maxLoss<=0) settings.maxLoss=10;
-    if (settings.minStake<10) settings.minStake=10;
-    if (settings.maxStake<settings.minStake) settings.maxStake=settings.minStake;
-    settings.sound=!!s.sound; settings.wake=s.wake!==false;
-    if (s.coins && typeof s.coins==='object') COINS.forEach(function(c){ settings.coins[c]=s.coins[c]!==false; });
-  }
-  function validTrade(t){ return t && typeof t.id==='string' && typeof t.coin==='string' && MODES[t.mode] && isFinite(t.entry) && isFinite(t.stop) && isFinite(t.target) && isFinite(t.barTs); }
-  function load(){
-    try{
-      var raw=localStorage.getItem(LS_KEY); if (!raw) return;
-      var b=JSON.parse(raw);
-      applySettings(b.settings);
-      if (Array.isArray(b.trades)) journal.trades=b.trades.filter(validTrade);
-      if (Array.isArray(b.feed)) journal.feed=b.feed.filter(function(f){ return f && isFinite(f.t) && typeof f.text==='string'; });
-      if (b.source && typeof b.source==='object') COINS.forEach(function(c){ if (typeof b.source[c]==='string') source[c]=b.source[c]; });
-    }catch(e){}
-  }
-  function save(){
-    try{ localStorage.setItem(LS_KEY, JSON.stringify({settings:settings, trades:journal.trades.slice(-200), feed:journal.feed.slice(-80), source:source})); }catch(e){}
-  }
-
-  /* ---------- price feeds ---------- */
   async function getJSON(url){
     var ctl=new AbortController(), to=setTimeout(function(){ ctl.abort(); }, 12000);
     try{
       var r=await fetch(url,{signal:ctl.signal, cache:'no-store'});
       if (r.status===400 || r.status===404) throw {kind:'notfound'};
-      if (!r.ok) throw {kind:'down'};
+      if (!r.ok) throw {kind:'down', status:r.status};
       return await r.json();
     }catch(e){
       if (e && e.kind) throw e;
@@ -651,21 +578,21 @@ var Engine = (function(){
     cache.set(key,{at:Date.now(),bars:bars});
     return bars;
   }
-  async function fetchCandles(coin, tf){
-    if (tf==='1W') return Engine.aggregate(await fetchCandles(coin,'1D'), TF_MS['1W'], 4*86400e3);
+  async function candles(coin, tf){
+    if (tf==='1W') return Engine.aggregate(await candles(coin,'1D'), TF_MS['1W'], 4*86400e3);
     var order=PROVIDERS.filter(function(p){ return p.id===source[coin]; }).concat(PROVIDERS.filter(function(p){ return p.id!==source[coin]; }));
-    var sawDown=false, tried=0;
+    var sawDown=false;
     for (var i=0;i<order.length;i++){
       var p=order[i], hl=health[p.id];
       if (hl.downUntil > Date.now()){ sawDown=true; continue; }
-      tried++;
       try{
         var bars=await providerCandles(p, coin, tf);
         hl.ok++; hl.fail=0; source[coin]=p.id;
         return bars;
       }catch(e){
-        if (!(e && e.kind==='notfound')){
-          sawDown=true; hl.fail++;
+        if (e && e.kind==='notfound') hl.missing++;
+        else {
+          sawDown=true; hl.fail++; hl.lastStatus=(e && e.status)||'network';
           if (hl.fail>=2) hl.downUntil=Date.now()+(hl.ok?2:10)*60e3;
         }
       }
@@ -673,86 +600,225 @@ var Engine = (function(){
     throw {kind: sawDown ? 'down' : 'notfound'};
   }
   async function tryCandles(coin, tf){
-    try{ return {bars:await fetchCandles(coin, tf)}; }
+    try{ return {bars:await candles(coin, tf)}; }
     catch(e){ return {bars:null, err:(e && e.kind)||'down'}; }
   }
+  return {PROVIDERS:PROVIDERS, TF_MS:TF_MS, health:health, source:source, tryCandles:tryCandles};
+})();
 
-  async function scanCoin(coin){
-    var modes=activeModes(), need={};
+/* The desk itself: which coins, which trade types, how one scan runs and how paper trades are kept. Shared by the app and the background scanner. */
+var Desk = (function(){
+  var COINS=['BTC','ETH','XRP','SOL','ADA','LINK','UNI','XLM','HBAR','QNT','HYPE','ONDO','ZEC','XMR'];
+  var MODES={
+    short:{label:'Short', sig:'1h', ctx:'4h', sigLabel:'1-hour', ctxLabel:'4-hour chart', hold:'hours to 2 days', maxBars:48},
+    swing:{label:'Swing', sig:'4h', ctx:'1D', sigLabel:'4-hour', ctxLabel:'daily chart', hold:'2 days to 2 weeks', maxBars:84},
+    long:{label:'Long', sig:'1D', ctx:'1W', sigLabel:'daily', ctxLabel:'weekly chart', hold:'2 weeks to 2 months', maxBars:60}
+  };
+  var MODE_KEYS=['short','swing','long'], TF_MS=Feeds.TF_MS;
+  var SETUP_NAME={pullback:'Pullback in an uptrend', breakout:'Breakout on strong volume', bounce:'Oversold bounce'};
+
+  function fmtPrice(p){
+    if (!isFinite(p)) return '$?';
+    var dp = p>=1000?0 : p>=100?2 : p>=1?3 : p>=0.1?4 : p>=0.01?5 : 6;
+    return '$'+p.toLocaleString('en-GB',{minimumFractionDigits:dp, maximumFractionDigits:dp});
+  }
+  function fmtGBP(x){ var a=Math.abs(x); return (x<0?'−':'')+'£'+(a>=100?Math.round(a).toLocaleString('en-GB'):a.toFixed(2)); }
+  function fmtPct(f){ return (f>=0?'+':'−')+Math.abs(f*100).toFixed(1)+'%'; }
+  function fmtSpan(days){ return days>=60 ? Math.round(days/30)+' months' : days>=3 ? Math.round(days)+' days' : Math.max(1,Math.round(days*24))+' hours'; }
+
+  function addFeed(st, kind, text, t){
+    st.journal.feed.push({t:t, kind:kind, text:text});
+    if (st.journal.feed.length>300) st.journal.feed=st.journal.feed.slice(-300);
+  }
+  function openTrade(st, coin, m, res, now){
+    var id=coin+'-'+m+'-'+res.barTs;
+    var exists=st.journal.trades.some(function(t){ return t.id===id || (t.coin===coin && t.mode===m && t.status==='open'); });
+    if (exists) return false;
+    st.journal.trades.push({id:id, coin:coin, mode:m, setup:res.setup, score:res.score, entry:res.entry, stop:res.stop, target:res.target,
+      stake:res.stake, feePct:st.settings.feePct, barTs:res.barTs, openedAt:now, status:'open'});
+    if (st.journal.trades.length>500) st.journal.trades=st.journal.trades.slice(-500);
+    addFeed(st, 'buy', coin+' · '+MODES[m].label+' · '+SETUP_NAME[res.setup]+'. Entry '+fmtPrice(res.entry)+', stop '+fmtPrice(res.stop)+', target '+fmtPrice(res.target)+'. Stake '+fmtGBP(res.stake)+'.', now);
+    return true;
+  }
+  function followTrades(st, coin, m, bars, now){
+    st.journal.trades.forEach(function(t){
+      if (t.coin!==coin || t.mode!==m || t.status!=='open') return;
+      var out=Engine.follow(t, bars, TF_MS[MODES[m].sig], now, MODES[m].maxBars);
+      if (!out) return;
+      t.status=out.status; t.closedAt=out.closedAt; t.exit=out.exit; t.frac=out.frac; t.gbp=t.stake*out.frac;
+      var word = out.status==='target' ? 'hit its target' : out.status==='stopped' ? 'was stopped out' : 'ran out of time and was closed';
+      addFeed(st, t.gbp>=0?'win':'loss', coin+' ('+MODES[m].label.toLowerCase()+') '+word+': '+fmtGBP(t.gbp)+' on paper ('+fmtPct(out.frac)+' after fees).', now);
+    });
+  }
+  async function backdrop(st){
+    var b4=await Feeds.tryCandles('BTC','4h'), b1=await Feeds.tryCandles('BTC','1D');
+    st.btc={h4: b4.bars ? Engine.trendOf(b4.bars) : 'unknown', d1: b1.bars ? Engine.trendOf(b1.bars) : 'unknown'};
+  }
+  // st: {settings, journal:{trades,feed}, results, rowInfo, btc, btCache, log, onBuy}
+  async function scanCoin(st, coin, modes){
+    var need={};
     modes.forEach(function(m){ need[MODES[m].sig]=1; need[MODES[m].ctx]=1; });
     var got={}, order=['1h','4h','1D','1W'];
-    for (var i=0;i<order.length;i++){ if (need[order[i]]) got[order[i]]=await tryCandles(coin, order[i]); }
+    for (var i=0;i<order.length;i++){ if (need[order[i]]) got[order[i]]=await Feeds.tryCandles(coin, order[i]); }
     var now=Date.now();
-    results[coin]=results[coin]||{};
+    st.results[coin]=st.results[coin]||{};
     var info=(got['1h']&&got['1h'].bars) ? {bars:got['1h'].bars, back:24} : (got['4h']&&got['4h'].bars) ? {bars:got['4h'].bars, back:6} : (got['1D']&&got['1D'].bars) ? {bars:got['1D'].bars, back:1} : null;
     if (info){
       var last=info.bars[info.bars.length-1], ref=info.bars[Math.max(0, info.bars.length-1-info.back)];
-      rowInfo[coin]={price:last.c, chg:(last.c-ref.c)/ref.c};
+      st.rowInfo[coin]={price:last.c, chg:(last.c-ref.c)/ref.c};
     }
     modes.forEach(function(m){
       var M=MODES[m], sig=got[M.sig], ctx=got[M.ctx];
       if (!sig || !sig.bars){
-        results[coin][m]={status:'nodata', note: sig && sig.err==='notfound' ? 'None of the price feeds list '+coin+' against the dollar.' : 'Couldn\'t load prices this time. The desk will try again on the next scan.'};
+        st.results[coin][m]={status:'nodata', note: sig && sig.err==='notfound' ? 'None of the price feeds list '+coin+' against the dollar.' : 'Couldn\'t load prices this time. The desk will try again on the next scan.'};
         return;
       }
-      var opts={sig:sig.bars, ctx:ctx&&ctx.bars, tfMs:TF_MS[M.sig], ctxMs:TF_MS[M.ctx], now:now, settings:settings,
-        btcTrend:btc.h4, isBtc:coin==='BTC', sigLabel:M.sigLabel, ctxLabel:M.ctxLabel, fmt:fmtPrice, maxBars:M.maxBars};
+      var opts={sig:sig.bars, ctx:ctx&&ctx.bars, tfMs:TF_MS[M.sig], ctxMs:TF_MS[M.ctx], now:now, settings:st.settings,
+        btcTrend:st.btc.h4, isBtc:coin==='BTC', sigLabel:M.sigLabel, ctxLabel:M.ctxLabel, fmt:fmtPrice, maxBars:M.maxBars};
       var res=Engine.analyse(opts);
-      var bk=coin+'|'+m, btKey=sig.bars[sig.bars.length-1].t+'|'+sig.bars.length+'|'+settings.feePct;
-      if (!btCache[bk] || btCache[bk].key!==btKey) btCache[bk]={key:btKey, res:Engine.backtest(opts)};
-      res.bt=btCache[bk].res;
+      var bk=coin+'|'+m, btKey=sig.bars[sig.bars.length-1].t+'|'+sig.bars.length+'|'+st.settings.feePct;
+      if (!st.btCache[bk] || st.btCache[bk].key!==btKey) st.btCache[bk]={key:btKey, res:Engine.backtest(opts)};
+      res.bt=st.btCache[bk].res;
       if (res.status==='buy' && res.bt.n>=4 && res.bt.sum<0){
         res.score=Math.max(0, res.score-12);
         res.strength = res.score>=75?'Strong':(res.score>=60?'Moderate':'Speculative');
         res.reasons.push('Marked down: these rules have lost money on '+coin+' over the past '+fmtSpan(res.bt.days)+' ('+res.bt.wins+' of '+res.bt.n+' trades won).');
         if (res.score<50){ res.status='watch'; res.note='A setup appeared, but these rules have a losing record on '+coin+'. Skipped.'; }
       }
-      results[coin][m]=res;
-      followTrades(coin, m, sig.bars, now);
-      if (res.status==='buy') openTrade(coin, m, res, now);
+      st.results[coin][m]=res;
+      if (st.log) followTrades(st, coin, m, sig.bars, now);
+      if (res.status==='buy'){
+        if (st.log) openTrade(st, coin, m, res, now);
+        if (st.onBuy) st.onBuy(coin, m, res);
+      }
     });
   }
-  function openTrade(coin, m, res, now){
-    var id=coin+'-'+m+'-'+res.barTs;
-    var exists=journal.trades.some(function(t){ return t.id===id || (t.coin===coin && t.mode===m && t.status==='open'); });
-    if (exists) return;
-    journal.trades.push({id:id, coin:coin, mode:m, setup:res.setup, score:res.score, entry:res.entry, stop:res.stop, target:res.target,
-      stake:res.stake, feePct:settings.feePct, barTs:res.barTs, openedAt:now, status:'open'});
-    addFeed('buy', coin+' · '+MODES[m].label+' · '+SETUP_NAME[res.setup]+'. Entry '+fmtPrice(res.entry)+', stop '+fmtPrice(res.stop)+', target '+fmtPrice(res.target)+'. Stake '+fmtGBP(res.stake)+'.', now);
-    beep();
+  async function scanAll(st, coins, modes, onStep, keepGoing){
+    await backdrop(st);
+    var queue=coins.slice();
+    async function worker(){
+      while (queue.length && (!keepGoing || keepGoing())){
+        var c=queue.shift();
+        try{ await scanCoin(st, c, modes); }
+        catch(e){ st.results[c]={}; modes.forEach(function(m){ st.results[c][m]={status:'nodata',note:'Something went wrong reading this coin. The desk will try again on the next scan.'}; }); }
+        if (onStep) onStep(c);
+      }
+    }
+    await Promise.all([worker(),worker(),worker()]);
+    return coins.some(function(c){ return modes.some(function(m){ var r=st.results[c]&&st.results[c][m]; return r && r.status!=='nodata'; }); });
   }
-  function followTrades(coin, m, bars, now){
-    journal.trades.forEach(function(t){
-      if (t.coin!==coin || t.mode!==m || t.status!=='open') return;
-      var out=Engine.follow(t, bars, TF_MS[MODES[m].sig], now, MODES[m].maxBars);
-      if (!out) return;
-      t.status=out.status; t.closedAt=out.closedAt; t.exit=out.exit; t.frac=out.frac; t.gbp=t.stake*out.frac;
-      var word = out.status==='target' ? 'hit its target' : out.status==='stopped' ? 'was stopped out' : 'ran out of time and was closed';
-      addFeed(t.gbp>=0?'win':'loss', coin+' ('+MODES[m].label.toLowerCase()+') '+word+': '+fmtGBP(t.gbp)+' on paper ('+fmtPct(out.frac)+' after fees).', now);
-    });
-  }
-  function addFeed(kind, text, t){ journal.feed.push({t:t||Date.now(), kind:kind, text:text}); if (journal.feed.length>80) journal.feed=journal.feed.slice(-80); }
+  return {COINS:COINS, MODES:MODES, MODE_KEYS:MODE_KEYS, TF_MS:TF_MS, SETUP_NAME:SETUP_NAME,
+    fmtPrice:fmtPrice, fmtGBP:fmtGBP, fmtPct:fmtPct, fmtSpan:fmtSpan, scanAll:scanAll};
+})();
+/*SHARED-END*/
 
+(function(){
+  var COINS=Desk.COINS, MODES=Desk.MODES, MODE_KEYS=Desk.MODE_KEYS, TF_MS=Desk.TF_MS, SETUP_NAME=Desk.SETUP_NAME;
+  var fmtPrice=Desk.fmtPrice, fmtGBP=Desk.fmtGBP, fmtPct=Desk.fmtPct, fmtSpan=Desk.fmtSpan;
+  var SCAN_EVERY=5*60e3, CLOUD_EVERY=5*60e3;
+  var LS_KEY='trading-desk-app-v1';
+  /* The background scanner (a scheduled GitHub job) saves its record here. */
+  var DATA_URL='https://raw.githubusercontent.com/p8f86tvr9n-dotcom/briefing/desk-data/desk-data.json';
+
+  var settings={mode:'all', maxLoss:10, minStake:50, maxStake:500, feePct:0.4, sound:false, wake:true, coins:{}};
+  COINS.forEach(function(c){ settings.coins[c]=true; });
+  var journal={trades:[], feed:[]};                     // used only when there is no background record
+  var live={settings:settings, journal:journal, results:{}, rowInfo:{}, btc:{h4:'unknown',d1:'unknown'}, btCache:{}, log:true, onBuy:null};
+  var cloud=null, cloudState='loading';
+  var on=false, scanning=false, hasScanned=false, lastScanAt=0, nextScanAt=0, timer=null, progress=null, pageError=null;
+  var seenBuys={}, actx=null, wake=null, clearArmed=false;
+
+  var $=function(id){return document.getElementById(id);};
+  function el(tag, props){
+    var e=document.createElement(tag);
+    if (props) for (var k in props){
+      if (k==='class') e.className=props[k];
+      else if (k==='text') e.textContent=props[k];
+      else e.setAttribute(k, props[k]);
+    }
+    for (var i=2;i<arguments.length;i++){
+      var c=arguments[i]; if (c==null) continue;
+      e.appendChild(typeof c==='string' ? document.createTextNode(c) : c);
+    }
+    return e;
+  }
+  function clear(node){ while(node.firstChild) node.removeChild(node.firstChild); }
+  function fmtClock(t){ return new Date(t).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
+  function fmtWhen(t){
+    var d=new Date(t), today=new Date();
+    if (d.toDateString()===today.toDateString()) return fmtClock(t);
+    return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' '+fmtClock(t);
+  }
+  function fmtAgo(ms){ var m=Math.round(ms/60000); return m<1?'just now' : m<60?m+' min ago' : m<1440?Math.round(m/60)+' h ago' : Math.round(m/1440)+' days ago'; }
+  function activeModes(){ return settings.mode==='all' ? MODE_KEYS : [settings.mode]; }
+  function activeCoins(){ return COINS.filter(function(c){ return settings.coins[c]!==false; }); }
+
+  /* Which data the screen shows: the live scan while it is on, otherwise the background desk's last scan. */
+  function usingLive(){ return (on && hasScanned) || !cloud; }
+  function V(){ return usingLive() ? live : cloud.view; }
+  function J(){ return cloud ? cloud : journal; }
+  function hasData(){ return hasScanned || !!cloud; }
+
+  /* ---------- storage on this device ---------- */
+  function applySettings(s){
+    if (!s || typeof s!=='object') return;
+    if (s.mode==='all' || MODES[s.mode]) settings.mode=s.mode;
+    ['maxLoss','minStake','maxStake','feePct'].forEach(function(k){ var v=Number(s[k]); if (isFinite(v) && v>=0) settings[k]=v; });
+    if (settings.maxLoss<=0) settings.maxLoss=10;
+    if (settings.minStake<10) settings.minStake=10;
+    if (settings.maxStake<settings.minStake) settings.maxStake=settings.minStake;
+    settings.sound=!!s.sound; settings.wake=s.wake!==false;
+    if (s.coins && typeof s.coins==='object') COINS.forEach(function(c){ settings.coins[c]=s.coins[c]!==false; });
+  }
+  function validTrade(t){ return t && typeof t.id==='string' && typeof t.coin==='string' && MODES[t.mode] && isFinite(t.entry) && isFinite(t.stop) && isFinite(t.target) && isFinite(t.barTs) && isFinite(t.openedAt); }
+  function validFeed(f){ return f && isFinite(f.t) && typeof f.text==='string'; }
+  function load(){
+    try{
+      var raw=localStorage.getItem(LS_KEY); if (!raw) return;
+      var b=JSON.parse(raw);
+      applySettings(b.settings);
+      if (Array.isArray(b.trades)) journal.trades=b.trades.filter(validTrade);
+      if (Array.isArray(b.feed)) journal.feed=b.feed.filter(validFeed);
+      if (b.source && typeof b.source==='object') COINS.forEach(function(c){ if (typeof b.source[c]==='string') Feeds.source[c]=b.source[c]; });
+    }catch(e){}
+  }
+  function save(){
+    try{ localStorage.setItem(LS_KEY, JSON.stringify({settings:settings, trades:journal.trades.slice(-200), feed:journal.feed.slice(-80), source:Feeds.source})); }catch(e){}
+  }
+
+  /* ---------- background record ---------- */
+  async function loadCloud(){
+    try{
+      var r=await fetch(DATA_URL,{cache:'no-store'});
+      if (!r.ok) throw 0;
+      var d=await r.json();
+      if (!d || typeof d!=='object' || !d.coins || !isFinite(d.updatedAt) || !d.updatedAt) throw 0;
+      var view={results:{}, rowInfo:{}, btc:{h4:(d.btc&&d.btc.h4)||'unknown', d1:(d.btc&&d.btc.d1)||'unknown'}};
+      COINS.forEach(function(c){
+        var x=d.coins[c]; if (!x || typeof x!=='object') return;
+        if (x.modes && typeof x.modes==='object') view.results[c]=x.modes;
+        if (isFinite(x.price) && isFinite(x.chg)) view.rowInfo[c]={price:x.price, chg:x.chg};
+      });
+      cloud={view:view, updatedAt:d.updatedAt, startedAt:d.startedAt||d.updatedAt, scans:d.scans||0, config:d.config||{}, sources:d.sources||{},
+        trades:(Array.isArray(d.trades)?d.trades:[]).filter(validTrade), feed:(Array.isArray(d.feed)?d.feed:[]).filter(validFeed)};
+      cloudState='ok';
+    }catch(e){ if (!cloud) cloudState='none'; }
+    live.log=!cloud;
+    renderAll();
+  }
+
+  /* ---------- live scan ---------- */
+  live.onBuy=function(coin, m, res){
+    var id=coin+'-'+m+'-'+res.barTs;
+    if (!seenBuys[id]){ seenBuys[id]=1; beep(); }
+  };
   async function scan(){
     if (scanning || !on) return;
     scanning=true; pageError=null; clearTimeout(timer);
     var coins=activeCoins();
     progress={done:0,total:coins.length}; renderStatus(); renderError();
     try{
-      var b4=await tryCandles('BTC','4h'), b1=await tryCandles('BTC','1D');
-      btc.h4 = b4.bars ? Engine.trendOf(b4.bars) : 'unknown';
-      btc.d1 = b1.bars ? Engine.trendOf(b1.bars) : 'unknown';
-      var queue=coins.slice();
-      async function worker(){
-        while (queue.length && on){
-          var c=queue.shift();
-          try{ await scanCoin(c); }
-          catch(e){ results[c]={}; MODE_KEYS.forEach(function(m){ results[c][m]={status:'nodata',note:'Something went wrong reading this coin. The desk will try again on the next scan.'}; }); }
-          progress.done++; renderStatus(); renderSignals(); renderCoins();
-        }
-      }
-      await Promise.all([worker(),worker(),worker()]);
-      var gotAny=coins.some(function(c){ return activeModes().some(function(m){ var r=results[c]&&results[c][m]; return r && r.status!=='nodata'; }); });
+      var gotAny=await Desk.scanAll(live, coins, activeModes(), function(){ progress.done++; renderStatus(); if (usingLive()){ renderSignals(); renderCoins(); } }, function(){ return on; });
       if (gotAny || !coins.length){ hasScanned=true; lastScanAt=Date.now(); }
       else pageError = navigator.onLine===false ? 'offline' : 'nofeed';
     }catch(e){ pageError='nofeed'; }
@@ -783,16 +849,19 @@ var Engine = (function(){
 
   /* ---------- render ---------- */
   function sourcesText(){
-    var n={}; activeCoins().forEach(function(c){ if (source[c] && rowInfo[c]) n[source[c]]=(n[source[c]]||0)+1; });
-    var parts=PROVIDERS.filter(function(p){ return n[p.id]; }).map(function(p){ return p.name+' ('+n[p.id]+')'; });
+    var src=usingLive() ? Feeds.source : (cloud ? cloud.sources : {}), info=V().rowInfo, n={};
+    activeCoins().forEach(function(c){ if (src[c] && info[c]) n[src[c]]=(n[src[c]]||0)+1; });
+    var parts=Feeds.PROVIDERS.filter(function(p){ return n[p.id]; }).map(function(p){ return p.name+' ('+n[p.id]+')'; });
     return parts.length ? 'Prices from '+parts.join(', ')+'.' : '';
   }
   function renderStatus(){
     $('power').setAttribute('aria-checked', on?'true':'false');
     var ps=$('powerState'), sl=$('statusLine');
     if (!on){
-      ps.textContent='Desk is off';
-      sl.textContent = hasScanned ? 'Last scan '+fmtClock(lastScanAt)+'. Results below are frozen until you turn it back on.' : 'Turn it on to scan your coins. It rescans every 5 minutes until you turn it off.';
+      ps.textContent='Live scan is off';
+      sl.textContent = cloud ? 'You\'re seeing the background desk\'s last scan. Turn this on for a fresh scan every 5 minutes while the app is open.'
+        : hasScanned ? 'Last scan '+fmtClock(lastScanAt)+'. Results below are frozen until you turn it back on.'
+        : 'Turn it on to scan your coins every 5 minutes while the app is open.';
       return;
     }
     if (scanning){
@@ -800,23 +869,40 @@ var Engine = (function(){
       sl.textContent = progress ? 'Checked '+progress.done+' of '+progress.total+' coins.' : 'Starting up.';
       return;
     }
-    ps.textContent='Desk is on';
+    ps.textContent='Live scan is on';
     var left=Math.max(0, Math.round((nextScanAt-Date.now())/1000)), mm=Math.floor(left/60), ss=('0'+(left%60)).slice(-2);
     sl.textContent=(lastScanAt ? 'Last scan '+fmtClock(lastScanAt)+'. Next in ' : 'No scan has finished yet. Next try in ')+mm+':'+ss+'. '+sourcesText();
+  }
+  function renderBg(){
+    var box=$('bg'); clear(box);
+    if (cloudState==='loading'){ box.appendChild(el('div',{class:'banner',text:'Checking the background desk…'})); return; }
+    if (!cloud){
+      box.appendChild(el('div',{class:'banner warn',text:'No background record could be loaded, so this app is working on its own and only scans while open. If the background desk was only just set up, its first scan can take up to half an hour.'}));
+      return;
+    }
+    var age=Date.now()-cloud.updatedAt, stale=age>45*60e3;
+    var b=el('div',{class:'banner backdrop '+(stale?'':'up')+(stale?' warn':'')});
+    b.appendChild(el('b',{text: stale ? 'Background desk is behind. ' : 'Background desk is running. '}));
+    b.appendChild(document.createTextNode('Last scan '+fmtWhen(cloud.updatedAt)+' ('+fmtAgo(age)+'). '+
+      (stale ? 'GitHub sometimes delays or pauses its scheduled jobs. If this lasts, check the Actions tab of your briefing repo. '
+             : 'It scans about every 10 minutes with this app closed, and keeps the signal feed and paper record below. ')+
+      cloud.scans.toLocaleString('en-GB')+' scans since '+new Date(cloud.startedAt).toLocaleDateString('en-GB',{day:'numeric',month:'short'})+'.'));
+    box.appendChild(b);
   }
   function renderError(){
     var box=$('pageError'); clear(box);
     if (!pageError){ box.hidden=true; return; }
     box.hidden=false;
-    var msg = pageError==='offline' ? 'You\'re offline, so no prices could be loaded. The desk will try again when the next scan is due.'
-      : 'None of the four price feeds answered (Binance, Coinbase, Kraken, Crypto.com). Check your connection, or try another network: some Wi-Fi and content blockers stop these requests. The desk will keep trying.';
+    var msg = pageError==='offline' ? 'You\'re offline, so the live scan couldn\'t load prices. It will try again when the next scan is due.'
+      : 'None of the four price feeds answered the live scan (Binance, Coinbase, Kraken, Crypto.com). Check your connection, or try another network: some Wi-Fi and content blockers stop these requests. It will keep trying.';
     box.appendChild(el('div',{class:'banner bad', role:'status', text:msg}));
   }
   function trendWord(t){ return t==='up'?'rising' : t==='down'?'falling' : t==='side'?'moving sideways' : 'unclear'; }
   function renderBackdrop(){
     var box=$('backdrop'); clear(box);
-    if (!hasScanned){ box.hidden=true; return; }
+    if (!hasData()){ box.hidden=true; return; }
     box.hidden=false;
+    var btc=V().btc;
     var cls = btc.h4==='down'||btc.d1==='down' ? 'down' : (btc.h4==='up' ? 'up' : '');
     var advice = btc.h4==='down' ? 'Most coins follow Bitcoin down, so buy signals are marked lower while this lasts.'
       : btc.h4==='up' ? 'A rising Bitcoin lifts most coins, so buy signals score a little higher.'
@@ -827,7 +913,7 @@ var Engine = (function(){
   }
   function levelBox(cls, k, v, p){ return el('div',{class:'level '+cls}, el('div',{class:'k',text:k}), el('div',{class:'v',text:v}), p?el('div',{class:'p',text:p}):null); }
   function pastLine(coin, bt){
-    if (!bt) return null;
+    if (!bt || !isFinite(bt.n)) return null;
     if (!bt.n) return el('p',{class:'past muted',text:'Past '+fmtSpan(bt.days)+' on '+coin+': these rules gave no completed trades, so there is no track record to lean on.'});
     return el('p',{class:'past'}, 'Past '+fmtSpan(bt.days)+' on '+coin+': '+bt.n+' trade'+(bt.n===1?'':'s')+' by these rules, '+bt.wins+' won. Net ',
       el('b',{class:bt.sum>=0?'pos':'neg',text:fmtPct(bt.sum)}), ' after fees.');
@@ -836,30 +922,31 @@ var Engine = (function(){
     var M=MODES[m];
     var t=el('article',{class:'ticket'+(example?' example':'')});
     t.appendChild(el('div',{class:'ticket-top'},
-      el('div',null, el('div',{class:'ticket-coin',text:coin}), el('div',{class:'ticket-sub',text:SETUP_NAME[r.setup]+' · '+M.label.toLowerCase()+' trade, '+M.hold})),
+      el('div',null, el('div',{class:'ticket-coin',text:coin}), el('div',{class:'ticket-sub',text:(SETUP_NAME[r.setup]||'Setup')+' · '+M.label.toLowerCase()+' trade, '+M.hold})),
       el('div',null, example ? el('span',{class:'pill wait',text:'Example, not live'}) : el('span',{class:'pill buy',text:'Buy · '+r.strength+' '+r.score}))));
     t.appendChild(el('div',{class:'levels'},
       levelBox('entry','Buy near', fmtPrice(r.entry), 'now '+fmtPrice(r.price)),
       levelBox('stop','Stop', fmtPrice(r.stop), fmtPct(-r.stopPct)),
       levelBox('target','Target', fmtPrice(r.target), fmtPct(r.tgtPct))));
     t.appendChild(el('p',{class:'money'}, 'Stake ', el('b',{text:fmtGBP(r.stake)}), '. Stopped out costs ', el('b',{class:'neg',text:fmtGBP(r.lossGBP)}), '. Target makes ', el('b',{class:'pos',text:fmtGBP(r.gainGBP)}), ' after fees.'));
-    if (r.overRisk) t.appendChild(el('p',{class:'small neg',text:'The stop is wide, so even your smallest stake risks more than your '+fmtGBP(settings.maxLoss)+' limit.'}));
-    var ul=el('ul',{class:'why'}); (r.reasons||[]).forEach(function(x){ ul.appendChild(el('li',{text:x})); }); t.appendChild(ul);
+    if (r.overRisk) t.appendChild(el('p',{class:'small neg',text:'The stop is wide, so even the smallest stake risks more than the loss limit.'}));
+    var ul=el('ul',{class:'why'}); (Array.isArray(r.reasons)?r.reasons:[]).forEach(function(x){ ul.appendChild(el('li',{text:String(x)})); }); t.appendChild(ul);
     if (!example){
       var pl=pastLine(coin, r.bt); if (pl) t.appendChild(pl);
-      t.appendChild(el('p',{class:'muted small',text:'Signal candle closed '+fmtWhen(r.barTs+TF_MS[M.sig])+'. Logged in your paper record.'}));
+      var tail = !cloud ? ' Logged in your paper record.' : usingLive() ? ' The background desk adds it to the paper record on its next scan.' : ' Logged in the paper record.';
+      t.appendChild(el('p',{class:'muted small',text:'Signal candle closed '+fmtWhen(r.barTs+TF_MS[M.sig])+'.'+tail}));
     }
     return t;
   }
   function renderSignals(){
     var box=$('tickets'); clear(box);
-    var list=[];
-    activeCoins().forEach(function(c){ activeModes().forEach(function(m){ var r=results[c]&&results[c][m]; if (r && r.status==='buy') list.push({c:c,m:m,r:r}); }); });
+    var list=[], res=V().results;
+    activeCoins().forEach(function(c){ activeModes().forEach(function(m){ var r=res[c]&&res[c][m]; if (r && r.status==='buy' && isFinite(r.entry) && isFinite(r.stop) && isFinite(r.target)) list.push({c:c,m:m,r:r}); }); });
     list.sort(function(a,b){ return b.r.score-a.r.score; });
-    $('sigMeta').textContent = hasScanned ? list.length+' live' : '';
+    $('sigMeta').textContent = hasData() ? list.length+(usingLive()?' live':' at '+fmtClock(cloud.updatedAt)) : '';
     if (list.length){ list.forEach(function(x){ box.appendChild(ticket(x.c,x.m,x.r,false)); }); return; }
-    if (hasScanned || scanning){
-      box.appendChild(el('div',{class:'empty',text: scanning && !hasScanned ? 'Scanning. Signals appear here as each coin is checked.' : 'No buy setups on the latest closed candles. Most scans end this way, and holding cash is a fine result. The desk keeps checking.'}));
+    if (hasData() || scanning){
+      box.appendChild(el('div',{class:'empty',text: scanning && !hasData() ? 'Scanning. Signals appear here as each coin is checked.' : 'No buy setups on the latest closed candles. Most scans end this way, and holding cash is a fine result. The desk keeps checking.'}));
       return;
     }
     box.appendChild(ticket('ABC','short',{setup:'pullback',score:78,strength:'Strong',entry:2.5,price:2.508,stop:2.44,target:2.62,stopPct:0.024,tgtPct:0.048,stake:310,lossGBP:9.92,gainGBP:12.4,
@@ -867,22 +954,22 @@ var Engine = (function(){
   }
   function renderCoins(){
     var box=$('coins'); clear(box);
-    var rank={buy:0,watch:1,wait:2,avoid:3,nodata:4};
+    var rank={buy:0,watch:1,wait:2,avoid:3,nodata:4}, res=V().results, infos=V().rowInfo;
     var coins=activeCoins().slice().sort(function(a,b){
-      function best(c){ var s=9; activeModes().forEach(function(m){ var r=results[c]&&results[c][m]; if (r && rank[r.status]<s) s=rank[r.status]; }); return s; }
+      function best(c){ var s=9; activeModes().forEach(function(m){ var r=res[c]&&res[c][m]; if (r && rank[r.status]<s) s=rank[r.status]; }); return s; }
       return best(a)-best(b) || COINS.indexOf(a)-COINS.indexOf(b);
     });
     if (!coins.length){ box.appendChild(el('div',{class:'coin muted',text:'No coins selected. Pick some under "Coins, fees, sound and screen".'})); return; }
     coins.forEach(function(c){
-      var info=rowInfo[c], row=el('div',{class:'coin'});
+      var info=infos[c], row=el('div',{class:'coin'});
       var top=el('div',{class:'coin-top'}, el('span',{class:'coin-name',text:c}), el('span',{class:'coin-price',text: info?fmtPrice(info.price):'—'}));
       if (info) top.appendChild(el('span',{class:'chg '+(info.chg>=0?'up':'down'),text:fmtPct(info.chg)+' 24h'}));
       row.appendChild(top);
       activeModes().forEach(function(m){
-        var r=results[c]&&results[c][m];
-        var status=r?r.status:'nodata';
+        var r=res[c]&&res[c][m];
+        var status=r && rank[r.status]!=null ? r.status : 'nodata';
         var label={buy:'Buy',watch:'Watch',wait:'Wait',avoid:'Avoid',nodata:r?'No data':'Not scanned'}[status];
-        var note = r ? (r.status==='buy' ? SETUP_NAME[r.setup]+'. See the signal above.' : (r.note||'')) : '';
+        var note = r ? (status==='buy' ? (SETUP_NAME[r.setup]||'Setup')+'. See the signal above.' : String(r.note||'')) : '';
         row.appendChild(el('div',{class:'coin-line'}, el('span',{class:'mode',text:MODES[m].label}), el('span',{class:'pill '+status,text:label}), el('span',{class:'note',text:note})));
       });
       box.appendChild(row);
@@ -890,12 +977,12 @@ var Engine = (function(){
   }
   function renderBacktest(){
     var box=$('bt'); clear(box);
-    if (!hasScanned){ box.appendChild(el('div',{class:'empty',text:'Turn the desk on once and this fills in with how each trade type would have done on your coins.'})); return; }
-    var t=el('div',{class:'bt'});
+    if (!hasData()){ box.appendChild(el('div',{class:'empty',text:'This fills in after the first scan with how each trade type would have done on your coins.'})); return; }
+    var res=V().results, t=el('div',{class:'bt'});
     t.appendChild(el('div',{class:'bt-row'}, el('span',{text:'Type'}), el('span',{text:'History'}), el('span',{text:'Trades'}), el('span',{text:'Won'}), el('span',{text:'Avg'})));
     activeModes().forEach(function(m){
       var n=0,w=0,sum=0,days=0;
-      activeCoins().forEach(function(c){ var r=results[c]&&results[c][m]; if (r && r.bt){ n+=r.bt.n; w+=r.bt.wins; sum+=r.bt.sum; if (r.bt.days>days) days=r.bt.days; } });
+      activeCoins().forEach(function(c){ var r=res[c]&&res[c][m]; if (r && r.bt && isFinite(r.bt.n)){ n+=r.bt.n; w+=r.bt.wins; sum+=r.bt.sum; if (r.bt.days>days) days=r.bt.days; } });
       var avg=n?sum/n:0;
       t.appendChild(el('div',{class:'bt-row'}, el('span',{text:MODES[m].label}), el('span',{text:days?fmtSpan(days):'—'}), el('span',{class:'num',text:String(n)}),
         el('span',{class:'num',text:n?Math.round(w/n*100)+'%':'—'}), el('span',{class:'num '+(n?(avg>=0?'pos':'neg'):''),text:n?fmtPct(avg):'—'})));
@@ -904,9 +991,10 @@ var Engine = (function(){
   }
   function renderFeed(){
     var box=$('feed'); clear(box);
-    if (!journal.feed.length){ box.appendChild(el('div',{class:'empty',text:'Each new buy signal and each paper-trade result is listed here as it happens, newest first.'})); return; }
+    var feed=J().feed;
+    if (!feed.length){ box.appendChild(el('div',{class:'empty',text:'Each new buy signal and each paper-trade result is listed here as it happens, newest first.'})); return; }
     var list=el('div',{class:'feed'});
-    journal.feed.slice().reverse().slice(0,30).forEach(function(f){
+    feed.slice().reverse().slice(0,60).forEach(function(f){
       var pill = f.kind==='buy'?el('span',{class:'pill buy',text:'Buy'}) : f.kind==='win'?el('span',{class:'pill win',text:'Won'}) : f.kind==='loss'?el('span',{class:'pill loss',text:'Lost'}) : null;
       var body=el('div',null); if (pill){ body.appendChild(pill); body.appendChild(document.createTextNode(' ')); }
       body.appendChild(document.createTextNode(f.text));
@@ -915,22 +1003,25 @@ var Engine = (function(){
     box.appendChild(list);
   }
   function renderRecord(){
-    var closed=journal.trades.filter(function(t){return t.status!=='open';}), open=journal.trades.filter(function(t){return t.status==='open';});
-    var wins=closed.filter(function(t){return t.gbp>0;}).length, net=closed.reduce(function(s,t){return s+(t.gbp||0);},0);
+    var trades=J().trades;
+    $('recMeta').textContent = cloud ? 'Kept by the background desk, same on every device' : 'Saved on this device';
+    $('clearWrap').hidden = !!cloud;
+    var closed=trades.filter(function(t){return t.status!=='open';}), open=trades.filter(function(t){return t.status==='open';});
+    var wins=closed.filter(function(t){return t.gbp>0;}).length, net=closed.reduce(function(s,t){return s+(Number(t.gbp)||0);},0);
     var sc=$('score'); clear(sc);
     [['Open',String(open.length),''],['Closed',String(closed.length),''],['Won',closed.length?wins+' of '+closed.length:'—',''],['Net on paper',closed.length?fmtGBP(net):'—',net>0?'pos':net<0?'neg':'']].forEach(function(x){
       sc.appendChild(el('div',null, el('div',{class:'k',text:x[0]}), el('div',{class:'v '+x[2],text:x[1]})));
     });
     var box=$('trades'); clear(box);
-    if (!journal.trades.length){ box.appendChild(el('div',{class:'empty',text:'No paper trades yet. The first buy signal starts the record.'})); return; }
+    if (!trades.length){ box.appendChild(el('div',{class:'empty',text:'No paper trades yet. The first buy signal starts the record.'})); return; }
     var list=el('div',{class:'feed'});
-    journal.trades.slice().reverse().slice(0,40).forEach(function(t){
+    trades.slice().reverse().slice(0,60).forEach(function(t){
       var M=MODES[t.mode], body=el('div',null), pill;
       if (t.status==='open') pill=el('span',{class:'pill watch',text:'Open'});
       else pill=el('span',{class:'pill '+(t.gbp>0?'win':'loss'),text: t.status==='target'?'Target':t.status==='stopped'?'Stopped':'Timed out'});
       body.appendChild(pill);
-      body.appendChild(document.createTextNode(' '+t.coin+' · '+M.label.toLowerCase()+' · in '+fmtPrice(t.entry)+', stop '+fmtPrice(t.stop)+', target '+fmtPrice(t.target)+' · '+fmtGBP(t.stake)));
-      if (t.status!=='open'){ body.appendChild(document.createTextNode(' · ')); body.appendChild(el('b',{class:t.gbp>0?'pos':'neg',text:fmtGBP(t.gbp)})); }
+      body.appendChild(document.createTextNode(' '+t.coin+' · '+M.label.toLowerCase()+' · in '+fmtPrice(t.entry)+', stop '+fmtPrice(t.stop)+', target '+fmtPrice(t.target)+' · '+fmtGBP(Number(t.stake)||0)));
+      if (t.status!=='open'){ body.appendChild(document.createTextNode(' · ')); body.appendChild(el('b',{class:t.gbp>0?'pos':'neg',text:fmtGBP(Number(t.gbp)||0)})); }
       list.appendChild(el('div',{class:'feed-item'}, el('time',{text:fmtWhen(t.openedAt)}), body));
     });
     box.appendChild(list);
@@ -946,9 +1037,11 @@ var Engine = (function(){
     $('minStake').value=settings.minStake; $('maxStake').value=settings.maxStake; $('feePct').value=settings.feePct;
     $('sound').checked=!!settings.sound; $('wake').checked=!!settings.wake;
     COINS.forEach(function(c){ var b=$('coin-'+c); if (b) b.setAttribute('aria-pressed', settings.coins[c]!==false?'true':'false'); });
+    var cfg=cloud && cloud.config;
+    $('bgSettings').textContent = cfg && isFinite(cfg.maxLoss) ? 'The stake and fee boxes on this screen apply to the live scan. The background desk uses its own: most lost per trade '+fmtGBP(cfg.maxLoss)+', stakes '+fmtGBP(cfg.minStake)+' to '+fmtGBP(cfg.maxStake)+', fees '+cfg.feePct+'% each way. To change those, edit desk-config.json in your briefing repo.' : '';
     $('feedInfo').textContent=sourcesText();
   }
-  function renderAll(){ renderStatus(); renderError(); renderControls(); renderBackdrop(); renderSignals(); renderCoins(); renderBacktest(); renderFeed(); renderRecord(); }
+  function renderAll(){ renderStatus(); renderBg(); renderError(); renderControls(); renderBackdrop(); renderSignals(); renderCoins(); renderBacktest(); renderFeed(); renderRecord(); }
 
   /* ---------- events ---------- */
   function settingsChanged(rescan){
@@ -963,7 +1056,7 @@ var Engine = (function(){
   $('power').addEventListener('click', function(){
     on=!on;
     if (on){ pageError=null; if (settings.sound) armSound(); holdWake(); renderAll(); scan(); }
-    else { clearTimeout(timer); dropWake(); renderAll(); }
+    else { clearTimeout(timer); dropWake(); renderAll(); loadCloud(); }
   });
   ['short','swing','long','all'].forEach(function(m){ $('mode-'+m).addEventListener('click', function(){ settings.mode=m; settingsChanged(true); }); });
   $('maxLoss').addEventListener('change', function(){ settings.maxLoss=Number(this.value)||10; settingsChanged(true); });
@@ -985,13 +1078,15 @@ var Engine = (function(){
     journal.trades=[]; journal.feed=[]; save(); renderFeed(); renderRecord();
   });
   setInterval(function(){ if (on && !scanning) renderStatus(); }, 1000);
+  setInterval(function(){ if (!document.hidden) loadCloud(); }, CLOUD_EVERY);
   document.addEventListener('visibilitychange', function(){
     if (document.hidden) return;
+    loadCloud();
     if (on) holdWake();
     if (on && !scanning && Date.now()>=nextScanAt){ clearTimeout(timer); scan(); }
   });
 
-  load(); renderAll();
+  load(); renderAll(); loadCloud();
 })();
 </script>
 </body>

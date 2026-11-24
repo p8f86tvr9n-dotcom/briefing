@@ -1,0 +1,8 @@
+{
+  "maxLoss": 10,
+  "minStake": 50,
+  "maxStake": 500,
+  "feePct": 0.4,
+  "coins": ["BTC", "ETH", "XRP", "SOL", "ADA", "LINK", "UNI", "XLM", "HBAR", "QNT", "HYPE", "ONDO", "ZEC", "XMR"],
+  "modes": ["short", "swing", "long"]
+}
